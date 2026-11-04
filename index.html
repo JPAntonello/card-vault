@@ -4009,7 +4009,7 @@ function renderTidy(){
   const rv = myCards.filter(c=>c.review);
   // the same card entered twice on the same day from the same place: often a double click
   const g = new Map(); for(const c of myCards){ const k = dupKey(c)+"|"+String(c.added||"").slice(0,10)+"|"+(c.from||""); if(!g.has(k)) g.set(k, []); g.get(k).push(c); }
-  const twice = [...g.values()].filter(l=>l.length>1);
+  const twice = [...g.values()].filter(l=>l.length>1 && !l.every(c=>c.twiceOk));
   const li = c => `<li><button type="button" data-open="${esc(c.id)}">${esc(nameOf(c))} #${esc(c.number||"")} · ${esc([c.year, c.set, c.variant].filter(Boolean).join(" "))}</button></li>`;
   const more = (l, n=12) => l.slice(0,n).map(li).join("") + (l.length>n ? `<li>…and ${l.length-n} more</li>` : "");
   $("#tdyBody").innerHTML = `
@@ -4018,13 +4018,17 @@ function renderTidy(){
     <section><h3>To check <span>${rv.length ? `<button type="button" class="btn" id="tdRev">Check ${rv.length} sale${rv.length===1?"":"s"}</button>` : `<span class="ok">✓ Nothing to check</span>`}</span></h3></section>
     <section><h3>No price <span>${noPrice.length ? `<button type="button" class="btn ghost" id="tdPrice">Search 130point for ${Math.min(noPrice.length, RUN_MAX)}</button>` : `<span class="ok">✓ All priced</span>`}</span></h3>${noPrice.length?`<ul>${more(noPrice)}</ul>`:""}</section>
     <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">Search 130point for ${Math.min(noPhoto.filter(priceable).length, RUN_MAX)}</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
-    <section><h3>Entered twice on the same day? <span>${twice.length ? "" : `<span class="ok">✓ None</span>`}</span></h3>
-      ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button></li>`).join("")}</ul>`:""}</section>
+    <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
+      ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it. If you really got two, tap ✓ Correct and it leaves this list.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button> <button type="button" class="btn ghost" data-twiceok="${esc(l.map(c=>c.id).join(","))}">✓ Correct</button></li>`).join("")}</ul>`:""}</section>
     <section><h3>Not linked to a set <span>${noSet.length ? "" : `<span class="ok">✓ None</span>`}</span></h3>${noSet.length?`<p class="hint">These cards don't use a checklist, so they can't be matched exactly. Ask Claude to add their set.</p><ul>${more(noSet)}</ul>`:""}</section>`;
 }
 $("#vTidy").addEventListener("click", async e=>{
   const o = e.target.closest("[data-open]"); if(o) return openCardPage(myCards.find(c=>c.id===o.dataset.open));
   const cp = e.target.closest("[data-copies]"); if(cp) return openCopies(cp.dataset.copies.split(","));
+  const tok = e.target.closest("[data-twiceok],#tdTwiceOk");
+  if(tok){ const ids = new Set((tok.dataset.twiceok || tok.dataset.ids || "").split(",")); tok.disabled = true;
+    try{ await commit("cards", all=>all.map(c=>ids.has(c.id) ? {...c, twiceOk:true} : c)); toast(ids.size > 2 ? "Marked as correct" : "Marked as correct"); }catch(err){ toast("Couldn't save: " + err.message); }
+    return renderTidy(); }
   if(e.target.id==="tdRev") return openReview();
   if(e.target.id==="tdPrice") return price130(myCards.filter(c=>priceable(c) && !(Number(c.value)>0)).sort(byPriority).slice(0, RUN_MAX));
   if(e.target.id==="tdPhoto") return price130(myCards.filter(c=>!c.image && !c.photo && priceable(c)).sort(byPriority).slice(0, RUN_MAX));
