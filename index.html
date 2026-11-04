@@ -548,13 +548,13 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   </section>
   <section class="pend" id="priceBar" hidden aria-label="Prices">
     <div class="pend-top"><b id="priceCount"></b><small id="priceInfo" class="note"></small>
-      <span class="pbtns"><button type="button" class="btn" id="updPrices" title="Opens 130point: one search per card reads its recent eBay sales (price) and a sale photo">Search 130point</button>
+      <span class="pbtns"><button type="button" class="btn" id="updPrices" title="Opens 130point: one search per card reads its recent eBay sales for the price (photos come only from TCDB or from you)">Search 130point</button>
       <button type="button" class="btn ghost" id="revBtn" hidden title="Sales the app was not sure were your card: compare the photos and decide">To check</button>
       <button type="button" class="btn" id="get130" hidden title="Opens 130point for the cards SportsCardsPro does not have">130point</button></span></div>
     <details id="priceHelp">
       <summary title="How it works">?</summary>
       <ol>
-        <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmFind" href="#">Card Vault search</a> (if you have older "Card Vault prices" or "Card Vault photos" bookmarks, delete them).</li>
+        <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmFind" href="#">Card Vault search</a> (if you have an older "Card Vault prices" bookmark, delete it; keep "Card Vault photos", it is for TCDB).</li>
         <li>Click <b>Search 130point</b>. A 130point page opens: click the <b>Card Vault search</b> bookmark there and keep the tab open until it says done. Each card is searched by its name and set. The price is always the <b>last sale</b> of exactly your version of the card (same base, parallel or numbered version, ungraded, no autos unless yours is one); with no sale of that version, no price. Photos are not taken from sales: they come from the TCDB checklist (Card Vault photos bookmark) or from you.</li>
         <li>If a run stops before the end (130point not answering, or its daily limit), click <b>Search 130point</b> again later: it continues with the cards that were not reached.</li>
         <li>Prices you typed yourself are also updated when 130point finds sales of the card; if it finds none, your price stays. Cards updated in the last 7 days are skipped.</li>
@@ -783,7 +783,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   <button type="button" class="btn ghost" id="selAll">All shown</button>
   <button type="button" class="btn ghost" id="selClear">Clear</button>
   <button type="button" class="btn ghost" id="selDone">Done</button>
-  <button type="button" class="btn ghost" id="selPrice" title="Look up the selected cards' prices (and missing photos) on 130point now, even if they were updated recently">Search 130point</button>
+  <button type="button" class="btn ghost" id="selPrice" title="Look up the selected cards' prices on 130point now, even if they were updated recently">Search 130point</button>
   <button type="button" class="btn" id="selEdit">Edit</button>
 </div>
 <aside class="drawer" id="cardDrawer" hidden aria-labelledby="cdTitle" role="dialog">
@@ -4021,7 +4021,7 @@ function renderTidy(){
       <p class="hint">Team, rookie, autograph and print run that the set's checklist knows but the card doesn't have yet.</p></section>
     <section><h3>To check <span>${rv.length ? `<button type="button" class="btn" id="tdRev">Check ${rv.length} sale${rv.length===1?"":"s"}</button>` : `<span class="ok">✓ Nothing to check</span>`}</span></h3></section>
     <section><h3>No price <span>${noPrice.length ? `<button type="button" class="btn ghost" id="tdPrice">Search 130point for ${Math.min(noPrice.length, RUN_MAX)}</button>` : `<span class="ok">✓ All priced</span>`}</span></h3>${noPrice.length?`<ul>${more(noPrice)}</ul>`:""}</section>
-    <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">Search 130point for ${Math.min(noPhoto.filter(priceable).length, RUN_MAX)}</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
+    <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">Get photos from TCDB</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
     <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
       ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it. If you really got two, tap ✓ Correct and it leaves this list.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button> <button type="button" class="btn ghost" data-twiceok="${esc(l.map(c=>c.id).join(","))}">✓ Correct</button></li>`).join("")}</ul>`:""}</section>
     <section><h3>Not linked to a set <span>${noSet.length ? "" : `<span class="ok">✓ None</span>`}</span></h3>${noSet.length?`<p class="hint">These cards don't use a checklist, so they can't be matched exactly. Ask Claude to add their set.</p><ul>${more(noSet)}</ul>`:""}</section>`;
@@ -4035,7 +4035,7 @@ $("#vTidy").addEventListener("click", async e=>{
     return renderTidy(); }
   if(e.target.id==="tdRev") return openReview();
   if(e.target.id==="tdPrice") return price130(myCards.filter(c=>priceable(c) && !(Number(c.value)>0)).sort(byPriority).slice(0, RUN_MAX));
-  if(e.target.id==="tdPhoto") return price130(myCards.filter(c=>!c.image && !c.photo && priceable(c)).sort(byPriority).slice(0, RUN_MAX));
+  if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : toast("TCDB has no photo for these cards yet. Open a card to add your own photo.");
   if(e.target.id==="tdFill"){ const md = new Map(missingDetails()); e.target.disabled = true;
     try{ await commit("cards", all=>all.map(c=>md.has(c.id) ? {...c, ...md.get(c.id)} : c)); toast(`Filled in ${md.size} card${md.size===1?"":"s"}`); }catch(err){ toast("Couldn't save: " + err.message); }
     renderTidy(); }
