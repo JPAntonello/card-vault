@@ -1114,16 +1114,27 @@ function ui(){
 function gate(html){ const g = $$("#cvGate"); g.innerHTML = `<div class="box">${html}</div>`; g.hidden = false; return g; }
 function showLogin(msg){
   const g = gate(`<h2>Card <span style="color:#0071e3">Vault</span></h2><p>Type your email. We send you a link: open it on this device to come in. No password.</p>
-    <form id="cvLog"><input type="email" id="cvEmail" required placeholder="you@email.com" autocomplete="email"><button>Send me the link</button></form>
+    <form id="cvLog"><input type="email" id="cvEmail" required placeholder="you@email.com" autocomplete="email">
+      <input type="password" id="cvPass" placeholder="Password (if you set one)" autocomplete="current-password">
+      <button>Log in</button></form>
+    <p class="st" style="font-size:13px">With a password you're in straight away. Without one, we email you a link.</p>
     <p id="cvLogMsg" class="${msg ? "err" : ""}">${escH(msg || "")}</p>`);
   try{ g.querySelector("#cvEmail").value = localStorage.getItem("cv-email") || ""; }catch{}
   g.querySelector("#cvLog").onsubmit = async e => {
     e.preventDefault();
-    const em = g.querySelector("#cvEmail").value.trim(), out = g.querySelector("#cvLogMsg"), b = g.querySelector("button");
-    b.disabled = true; out.className = ""; out.textContent = "Sending…";
+    const em = g.querySelector("#cvEmail").value.trim(), pw = g.querySelector("#cvPass").value, out = g.querySelector("#cvLogMsg"), b = g.querySelector("button");
+    b.disabled = true; out.className = ""; out.textContent = pw ? "Logging in…" : "Sending…";
     try{ localStorage.setItem("cv-email", em); }catch{}
+    if(pw){
+      const r = await sb.auth.signInWithPassword({email: em, password: pw});
+      b.disabled = false;
+      if(r.error){ out.className = "err"; out.textContent = /invalid/i.test(r.error.message) ? "Wrong email or password. No password yet? Leave it empty to get a link." : "Couldn't log in: " + r.error.message; }
+      else if(r.data && r.data.session) start(r.data.session);
+      return;
+    }
     const r = await sb.auth.signInWithOtp({email: em, options:{emailRedirectTo: location.origin + location.pathname}});
     b.disabled = false;
+    if(r.error && /rate limit/i.test(r.error.message)){ out.className = "err"; out.textContent = "Too many login emails in the last hour. Wait a bit, or log in with your password if you set one."; return; }
     if(r.error){ out.className = "err"; out.textContent = "Couldn't send: " + r.error.message; }
     else out.textContent = "Done. Open your email and click the Card Vault link (look in spam too). You can close this tab.";
   };
@@ -1151,7 +1162,7 @@ function openAccount(){
   const a = $$("#cvAcc");
   a.innerHTML = `<div class="box">
     <h2>☁ ${escH((prof && prof.name) || "Account")}</h2><p>Signed in as ${escH(email)}. Your cards are saved online; open this page on any device.</p>
-    <div class="row"><button class="g" id="cvRen">Change my name</button><button class="g" id="cvOut">Sign out</button><button class="g" id="cvX">Close</button></div>
+    <div class="row"><button class="g" id="cvRen">Change my name</button><button class="g" id="cvPw">Set a password</button><button class="g" id="cvOut">Sign out</button><button class="g" id="cvX">Close</button></div>
     <h3>Bring my collection from the PC app</h3>
     <p>Do these once, in order. Doing one again is safe: it replaces that part only.</p>
     <div class="row"><label class="pick">1. My lists… <input type="file" id="cvFData" accept=".json,application/json" multiple></label></div>
@@ -1169,6 +1180,20 @@ function openAccount(){
   a.hidden = false;
   a.querySelector("#cvX").onclick = () => { if(!busy) a.hidden = true; };
   a.querySelector("#cvOut").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  a.querySelector("#cvPw").onclick = () => {
+    const box = a.querySelector(".box"), d = document.createElement("form");
+    d.innerHTML = `<h3>Set a password</h3><p class="st">Then you can log in on any browser with your email and this password, no email link needed.</p>
+      <input type="password" id="cvNp" required minlength="8" placeholder="New password (8+ characters)" autocomplete="new-password" style="width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;border:1px solid #ccc;border-radius:9px;margin:4px 0 10px;background:inherit;color:inherit">
+      <div class="row"><button>Save password</button><span class="st" id="cvNpMsg"></span></div>`;
+    box.insertBefore(d, box.children[3]);
+    a.querySelector("#cvPw").disabled = true;
+    d.onsubmit = async e => {
+      e.preventDefault();
+      const r = await sb.auth.updateUser({password: d.querySelector("#cvNp").value});
+      d.querySelector("#cvNpMsg").textContent = r.error ? "Couldn't save: " + r.error.message : "Saved. Use it next time you log in.";
+      if(!r.error) d.querySelector("#cvNp").value = "";
+    };
+  };
   a.querySelector("#cvRen").onclick = async () => {
     const n = prompt("Your name for friends", (prof && prof.name) || ""); if(!n || !n.trim()) return;
     const r = await sb.from("profiles").update({name: n.trim()}).eq("id", uid);
