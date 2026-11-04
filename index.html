@@ -424,7 +424,7 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
   .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 }
 
-body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,body.noprice #sGainW{display:none!important}
+body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,body.noprice #sGainW,body.ro .vbadge,body.ro .val,body.ro .pl-row,body.ro .spark,body.ro #sGainW{display:none!important}
 #eyeBtn{white-space:nowrap}
 </style>
 </head>
@@ -1400,7 +1400,7 @@ const fromDisp = n => showBRL() ? n/rate() : n;              // shown currency -
 const curCode = () => showBRL() ? "BRL" : "USD";
 // "Hide prices": every amount on screen shows as ••• (values are kept, only hidden)
 var hidePrices = (()=>{ try{ return localStorage.getItem("cv-hidePrices")==="1"; }catch{ return false; } })();
-const fmtCur = (n, code, whole) => hidePrices ? (code==="BRL" ? "R$ •••" : "$ •••") : (code==="BRL" ? "R$ " : "$") + Number(n||0).toLocaleString(code==="BRL" ? "pt-BR" : "en-US", whole ? {maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtCur = (n, code, whole) => (hidePrices || viewing) ? (code==="BRL" ? "R$ •••" : "$ •••") : (code==="BRL" ? "R$ " : "$") + Number(n||0).toLocaleString(code==="BRL" ? "pt-BR" : "en-US", whole ? {maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2});
 const money = (n, whole) => fmtCur(toDisp(Number(n||0)), curCode(), whole);   // n in USD
 async function loadFx(){
   const today = new Date().toISOString().slice(0,10);
@@ -3351,7 +3351,7 @@ const hashStr = s => { let h = 5381; for(const ch of String(s)) h = ((h*33) ^ ch
 const photoKey = c => ((c.setId||"x") + "-" + normNum(c.number||"") + "-" + (c.parallelSid||"b") + "-" + hashStr(dupKey(c))).replace(/[^A-Za-z0-9_-]/g,"").slice(0,150);
 const snapCard = c => { const o = {id:c.id, k:dupKey(c), setId:c.setId||"", number:c.number||"", player:c.player||"", desc:c.desc||"", team:c.team||"",
   year:c.year||"", set:c.set||"", sport:c.sport||"", variant:c.variant||"", parallelSid:c.parallelSid||"", parallel:c.parallel||"", qty:Number(c.qty)||1,
-  value:Number(c.value)||0, valueDate:c.valueDate||"", rookie:!!c.rookie, auto:!!c.auto, grade:c.grade||"", status:c.status||"", added:c.added||""};
+  rookie:!!c.rookie, auto:!!c.auto, grade:c.grade||"", status:c.status||"", added:c.added||""};
   if(c.image || c.photo) o.pk = photoKey(c); return o; };
 async function loadMe(){ try{ me = await (await fetch("/api/me",{cache:"no-store"})).json(); }catch{ me = {name:"", shared:false}; } }
 let friendsAt = 0;
@@ -3453,16 +3453,15 @@ function renderTrades(){
   const name = $("#tFriend").value, {give, get} = tradeLists(name);
   const row = (x, side) => `<li><label><input type="checkbox" data-t="${side}|${esc(x.k)}"${tradeSel.has(side+"|"+x.k)?" checked":""}>
       <span class="bx-name">${esc(nameOf(x.c))} ${x.c.number?"#"+esc(x.c.number):""}<small>${esc([x.c.year, x.c.set, x.c.variant].filter(Boolean).join(" · "))}${x.spare>1?` · ${x.spare} spare`:""}</small></span>
-      <span class="bx-num">${Number(x.c.value)>0 ? money(x.c.value) : "<small>no value</small>"}</span></label></li>`;
+      <span class="bx-num">${side==="get" ? "" : Number(x.c.value)>0 ? money(x.c.value) : "<small>no value</small>"}</span></label></li>`;
   $("#tGive").innerHTML = give.map(x=>row(x,"give")).join("") || `<li class="hint" style="padding:8px 10px">No spares of yours that ${esc(name)} is missing.</li>`;
   $("#tGet").innerHTML = get.map(x=>row(x,"get")).join("") || `<li class="hint" style="padding:8px 10px">No spares of ${esc(name)}'s that you are missing.</li>`;
   const sum = (list, side) => { const s = list.filter(x=>tradeSel.has(side+"|"+x.k)); return {n:s.length, v:s.reduce((t,x)=>t+(Number(x.c.value)||0),0)}; };
   const g = sum(give,"give"), t = sum(get,"get");
   $("#tGiveSum").textContent = `· ${g.n} card${g.n===1?"":"s"} · ${money(g.v, true)}`;
-  $("#tGetSum").textContent = `· ${t.n} card${t.n===1?"":"s"} · ${money(t.v, true)}`;
-  const d = t.v - g.v;
+  $("#tGetSum").textContent = `· ${t.n} card${t.n===1?"":"s"}`;
   $("#tBal").textContent = !g.n && !t.n ? `${give.length} of yours ${name} could use · ${get.length} of ${name}'s you could use.`
-    : Math.abs(d) < 0.5 ? "Even by market value." : d > 0 ? `You get ${money(d, true)} more by market value.` : `You give ${money(-d, true)} more by market value.`;
+    : `You give ${g.n} card${g.n===1?"":"s"} (${money(g.v, true)}) · you get ${t.n} card${t.n===1?"":"s"}. Friends' prices stay private.`;
 }
 function openTrades(){
   $("#tFriend").innerHTML = friends.map(f=>`<option value="${esc(f.name)}"${f.name===viewing?" selected":""}>${esc(f.name)}</option>`).join("");
