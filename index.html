@@ -2772,7 +2772,7 @@ function price130(list){
 }
 const keepManual = () => LS.get("cv-keepManual")==="1";
 function toPrice(){ const w = new Set(lsList("cv-130list"));
-  return myCards.filter(c=>priceable(c) && ((!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || w.has(c.id))) || needPhoto(c))); }
+  return myCards.filter(c=>priceable(c) && ((!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried)))) || needPhoto(c))); }
 // new cards (no price) first, then the most valuable; at most 100 per run so 130point does not block the searches
 const RUN_MAX = 100;
 const byPriority = (a,b) => ((Number(a.value)>0) - (Number(b.value)>0)) || (Number(b.value)||0) - (Number(a.value)||0);
@@ -4010,6 +4010,8 @@ function renderTidy(){
   if(!tidyLoaded){ tidyLoaded = true; loadAllCatalogs().then(()=>{ if(view==="tidy") renderTidy(); renderView(); }); }
   const md = missingDetails(), noSet = myCards.filter(c=>!c.setId && c.status!=="pending");
   const noPhoto = myCards.filter(c=>!c.image && !c.photo), noPrice = myCards.filter(c=>priceable(c) && !(Number(c.value)>0));
+  // a card searched without finding a price waits a week before it is searched again
+  const noPriceNow = noPrice.filter(c=>!recent(c.priceTried)), noPriceWait = noPrice.length - noPriceNow.length;
   const rv = myCards.filter(c=>c.review);
   // the same card entered twice on the same day from the same place: often a double click
   const g = new Map(); for(const c of myCards){ const k = dupKey(c)+"|"+String(c.added||"").slice(0,10)+"|"+(c.from||""); if(!g.has(k)) g.set(k, []); g.get(k).push(c); }
@@ -4020,7 +4022,7 @@ function renderTidy(){
     <section><h3>Missing details <span>${md.length ? `<button type="button" class="btn" id="tdFill">Fill in ${md.length} card${md.length===1?"":"s"} from the checklists</button>` : `<span class="ok">✓ All filled in</span>`}</span></h3>
       <p class="hint">Team, rookie, autograph and print run that the set's checklist knows but the card doesn't have yet.</p></section>
     <section><h3>To check <span>${rv.length ? `<button type="button" class="btn" id="tdRev">Check ${rv.length} sale${rv.length===1?"":"s"}</button>` : `<span class="ok">✓ Nothing to check</span>`}</span></h3></section>
-    <section><h3>No price <span>${noPrice.length ? `<button type="button" class="btn ghost" id="tdPrice">Search 130point for ${Math.min(noPrice.length, RUN_MAX)}</button>` : `<span class="ok">✓ All priced</span>`}</span></h3>${noPrice.length?`<ul>${more(noPrice)}</ul>`:""}</section>
+    <section><h3>No price <span>${noPriceNow.length ? `<button type="button" class="btn ghost" id="tdPrice">Search 130point for ${Math.min(noPriceNow.length, RUN_MAX)}</button>` : noPrice.length ? "" : `<span class="ok">✓ All priced</span>`}</span></h3>${noPriceWait ? `<p class="hint">${noPriceWait} card${noPriceWait===1?" was":"s were"} searched in the last 7 days without a sale found: ${noPriceWait===1?"it waits":"they wait"} a week before being searched again.</p>` : ""}${noPrice.length?`<ul>${more([...noPriceNow, ...noPrice.filter(c=>recent(c.priceTried))])}</ul>`:""}</section>
     <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">Get photos from TCDB</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
     <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
       ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it. If you really got two, tap ✓ Correct and it leaves this list.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button> <button type="button" class="btn ghost" data-twiceok="${esc(l.map(c=>c.id).join(","))}">✓ Correct</button></li>`).join("")}</ul>`:""}</section>
@@ -4034,7 +4036,7 @@ $("#vTidy").addEventListener("click", async e=>{
     try{ await commit("cards", all=>all.map(c=>ids.has(c.id) ? {...c, twiceOk:true} : c)); toast(ids.size > 2 ? "Marked as correct" : "Marked as correct"); }catch(err){ toast("Couldn't save: " + err.message); }
     return renderTidy(); }
   if(e.target.id==="tdRev") return openReview();
-  if(e.target.id==="tdPrice") return price130(myCards.filter(c=>priceable(c) && !(Number(c.value)>0)).sort(byPriority).slice(0, RUN_MAX));
+  if(e.target.id==="tdPrice") return price130(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
   if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : toast("TCDB has no photo for these cards yet. Open a card to add your own photo.");
   if(e.target.id==="tdFill"){ const md = new Map(missingDetails()); e.target.disabled = true;
     try{ await commit("cards", all=>all.map(c=>md.has(c.id) ? {...c, ...md.get(c.id)} : c)); toast(`Filled in ${md.size} card${md.size===1?"":"s"}`); }catch(err){ toast("Couldn't save: " + err.message); }
