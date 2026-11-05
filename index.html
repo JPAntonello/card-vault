@@ -2452,7 +2452,7 @@ $("#clSub").addEventListener("change",e=>{ filt.sub=e.target.value; saveFilt(); 
 const BOOKMARKLET = "javascript:(async()=>{let s=decodeURIComponent((location.hash.match(/cardvault=([^&]*)/)||[])[1]||'');if(!s)s=prompt('Paste the Card Vault photo list');if(!s)return;let L;try{L=JSON.parse(s)}catch(e){alert('Card Vault: that is not a photo list');return}let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}let ok=0;for(const [u,n,v] of L){try{let b=null;for(const p of [u,v].filter(Boolean)){const r=await fetch(p);if(!r.ok)continue;const x=await r.blob();if(/image/.test(x.type)&&x.size>2000){b=x;break}}if(!b)continue;if(O){O.postMessage({cv:'photo',name:n,blob:b},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cardvault - '+n;document.body.appendChild(a);a.click();a.remove()}ok++;await new Promise(r=>setTimeout(r,800))}catch(e){}}alert('Card Vault: '+ok+' of '+L.length+' photos downloaded. '+(O?'They were sent to Card Vault online.':'They will appear in the app in a few seconds.'))})()";
 $("#bmLink").href = BOOKMARKLET;
 $("#bmLink").addEventListener("click", e=>{ e.preventDefault(); toast("Drag this button to your bookmarks bar, then use it on a TCDB page."); });
-const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && ((!c.image && !c.photo) || c.replacePhoto));
+const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && !c.noTcdbPhoto && ((!c.image && !c.photo) || c.replacePhoto));
 const saleSourced = c => /^(eBay|SportsCardsPro)$/.test(c.imageSource||"");
 // cards with no photo at all (looked up, so player/number are known)
 const noPhoto = () => cards.filter(c=>!c.image && !c.photo && c.status!=="pending" && c.player && c.number);
@@ -3360,7 +3360,7 @@ setPanel(LS.get("cv-fpanel")==="1");
 
 /* ---------- cards from a TCDB checklist that lost their pending TCDB photo: queue it again ---------- */
 async function restoreTcdbRefs(){
-  const todo = cards.filter(c=>c.setId && !c.tcdbFile && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
+  const todo = cards.filter(c=>c.setId && !c.tcdbFile && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
   if(!todo.length) return;
   await loadDrive().catch(()=>{});
   const have = new Set((driveFiles||[]).map(f=>f.p)), upd = new Map();
@@ -3919,16 +3919,25 @@ function openCardPage(c){
   $("#cdActs").innerHTML = viewing ? "" : `<button type="button" class="btn" id="cdEdit">Edit</button>
     ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">Search 130point now</button>`:""}
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
-    <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>`;
+    <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
+    ${c.image||c.photo?`<button type="button" class="btn ghost" id="cdBadPic" title="Removes this photo from the card; TCDB's photo is not taken again. Add your own with Edit.">Wrong photo</button>`:""}`;
   $("#scrim").hidden = $("#cardDrawer").hidden = false;
 }
 $("#cdClose").onclick = closeDrawers;
-$("#cdActs").onclick = e=>{
+$("#cdActs").onclick = async e=>{
   const c = cardOpen; if(!c) return;
   if(e.target.id==="cdEdit"){ closeDrawers(); openDrawer(myCards.find(x=>x.id===c.id) || allCards.find(x=>x.id===c.id)); }
   else if(e.target.id==="cdPrice"){ closeDrawers(); price130([c]); }
   else if(e.target.id==="cdCopies"){ closeDrawers(); openCopies(myCards.filter(x=>dupKey(x)===dupKey(c)).map(x=>x.id)); }
   else if(e.target.id==="cdGone"){ closeDrawers(); c.gone ? bringBack(c) : openGone(c); }
+  else if(e.target.id==="cdBadPic"){
+    if(!e.target.dataset.arm){ e.target.dataset.arm = "1"; e.target.textContent = "Tap again to remove the photo"; setTimeout(()=>{ if(e.target.isConnected){ delete e.target.dataset.arm; e.target.textContent = "Wrong photo"; } }, 4000); return; }
+    // every copy of this card loses the photo; TCDB's photo is not downloaded for it again
+    const k = dupKey(c), bad = c.image || "";
+    try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && (x.image===bad || (!bad && x.photo===c.photo)) ? {...x, image:"", photo:"", imageSource:"", tcdbFile:"", tcdbPath:"", replacePhoto:false, noTcdbPhoto:true} : x));
+      toast("Photo removed. Add the right one with Edit."); openCardPage(myCards.find(x=>x.id===c.id)); renderPhotoBar && renderPhotoBar(); }
+    catch(err){ toast("Couldn't save: " + err.message); }
+  }
 };
 
 /* ================= home search ================= */
