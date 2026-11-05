@@ -2664,7 +2664,7 @@ function cardMatch(title, c, strict){
   let extra = 0; const unknown = [];
   const knownTxt = " " + nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${c.team}`) + " ";
   const means = w => (WORD_MEANS[w]||[]).some(m => knownTxt.includes(" "+m+" "));
-  for(const w of nrm(title).replace(/[\[\]#\/]/g," ").split(" ")) if(w && !/^\d+$/.test(w) && !known.has(w) && !SET_STOP.has(w) && !/^(prizms?|rc|rookie)$/.test(w) && !means(w)){ extra++; unknown.push(w); }
+  for(const w of nrm(title).replace(/[\[\]#\/]/g," ").split(" ")) if(w && !/^\d+$/.test(w) && !known.has(w) && !SET_STOP.has(w) && !/^(prizms?|rc|rookie|fc|afc|cf|sc|ac|club|football|soccer|card|cards)$/.test(w) && !means(w)){ extra++; unknown.push(w); }
   cardMatch.info = {noNum, unknown};
   // without a number, an unexplained insert name ("Golden Moments") would be another card
   if(noNum && extra>2) return -1;
