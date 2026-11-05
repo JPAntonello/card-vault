@@ -1009,6 +1009,11 @@ async function api(url, method, rawBody){
     shareMap[q.key] = path; shareIndex[q.key] = path;
     return J({ok:true});
   }
+  if(p === "/api/unshare"){
+    const q = JSON.parse(await bodyText(rawBody) || "{}");
+    for(const k of q.keys || []){ delete shareMap[k]; delete shareIndex[k]; }
+    return J({ok:true});
+  }
   if(p === "/api/use-shared-photo"){
     const q = JSON.parse(await bodyText(rawBody) || "{}"), src = shareIndex[q.key];
     if(!src) return J({ok:false, error:"Not shared."});
@@ -3359,7 +3364,20 @@ $("#activeF").onclick = e=>{
 setPanel(LS.get("cv-fpanel")==="1");
 
 /* ---------- cards from a TCDB checklist that lost their pending TCDB photo: queue it again ---------- */
+// photos saved from sales (eBay, SportsCardsPro, 130point) before 3 Nov 2026 are taken off the cards:
+// photos come only from the TCDB checklist or from you. These ones had no "eBay" mark but are sale photos.
+const SALE_PIC_IDS = new Set(["mvh05hpnczh8om2", "mvh05hpn3y33oh8", "mvh05hpn5h2uqxq", "mvh0rwnj4482oj", "mvhg3p3rdgcecb", "mvic089vdo0ebd", "mvim43ue33l8lp", "mvim4ci1iwnby6", "mvim4k36wyrnw6", "mvjm38zk8c74zc", "mvjm7qw49j2jmq", "mvjm8xfioqo6c5", "mvjmb5j1irqd2f", "mvjmj2au7fvf7m", "mvjmjezmk0oiax", "mvjmkm33qrm1n0", "mvjmor6zlcn5iv", "mvjms5lbjofa2v", "mvjmsrigxsnoex", "mvjnfx81wjqeud", "mvjns9tvxa9t6g", "mvjny65xqia33o", "mvjnybnpmltmhc", "mvjnzpzvrowp4i", "mvjo0r6d7xzyd1", "mvjoawp580wavc", "mvjpc5dszzvcl5", "mvjpe1dggbfgnz", "mvtw6vx946ii4t"]);
+async function dropSalePhotos(){
+  const sale = myCards.filter(c=>c.image && !c.salePicGone && (saleSourced(c) || SALE_PIC_IDS.has(c.id)));
+  if(!sale.length) return;
+  const ids = new Set(sale.map(c=>c.id)), keys = sale.map(photoKey);
+  try{ await commit("cards", list=>list.map(c=> ids.has(c.id) ? {...c, image:"", imageSource:"", replacePhoto:false, salePicGone:true} : c));
+    fetch("/api/unshare", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({keys})}).catch(()=>{});
+    keys.forEach(k=>sharedPhotos.delete(k)); queueSnapshot();
+    toast(`${ids.size} photo${ids.size===1?"":"s"} from sales removed: TCDB's photo comes in their place where TCDB has one`); }catch{}
+}
 async function restoreTcdbRefs(){
+  await dropSalePhotos();
   const todo = cards.filter(c=>c.setId && !c.tcdbFile && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
   if(!todo.length) return;
   await loadDrive().catch(()=>{});

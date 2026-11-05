@@ -181,6 +181,11 @@ async function api(url, method, rawBody){
     shareMap[q.key] = path; shareIndex[q.key] = path;
     return J({ok:true});
   }
+  if(p === "/api/unshare"){
+    const q = JSON.parse(await bodyText(rawBody) || "{}");
+    for(const k of q.keys || []){ delete shareMap[k]; delete shareIndex[k]; }
+    return J({ok:true});
+  }
   if(p === "/api/use-shared-photo"){
     const q = JSON.parse(await bodyText(rawBody) || "{}"), src = shareIndex[q.key];
     if(!src) return J({ok:false, error:"Not shared."});
