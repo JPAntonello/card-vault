@@ -539,10 +539,11 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
     <details id="photoHelp">
       <summary title="How it works">?</summary>
       <ol>
-        <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmLink" href="#">Card Vault photos</a><br><small>Photos come from the TCDB checklists, then from SportsCardsPro's catalog pictures, or from you (Edit → photo). Never from sales.</small></li>
+        <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmLink" href="#">Card Vault photos</a><br><small>Photos come from the TCDB checklists, then SportsCardsPro's catalog pictures, then the photo of the card's last sale, or from you (Edit → photo).</small></li>
         <li>Click <b>From TCDB</b>. A TCDB page opens (pass its security check if one appears). Click the <b>Card Vault photos</b> bookmark there and keep the tab open until it says done.</li>
         <li>The photos go straight to Card Vault and the cards update by themselves.</li>
-        <li>Cards TCDB has no photo for: click <b>SportsCardsPro</b>. A SportsCardsPro page opens: click your <b>Card Vault search</b> bookmark there (the one from the price help) and keep the tab open until it says done. Only SportsCardsPro's own picture of exactly that card and version is taken, never a sale photo. Cards it doesn't have keep "No photo yet": add yours with <b>Edit</b>.</li>
+        <li>Cards TCDB has no photo for: click <b>SportsCardsPro</b>. A SportsCardsPro page opens: click your <b>Card Vault search</b> bookmark there (the one from the price help) and keep the tab open until it says done. Only SportsCardsPro's own picture of exactly that card and version is taken.</li>
+        <li>Cards neither TCDB nor SportsCardsPro has a photo of get the photo of the sale that gave their price (Search 130point). A TCDB or SportsCardsPro photo replaces it when one turns up. Wrong one? Open the card → <b>Wrong photo</b>, or add yours with <b>Edit</b>.</li>
       </ol>
     </details>
   </section>
@@ -2458,7 +2459,9 @@ const BOOKMARKLET = "javascript:(async()=>{if(!/tcdb\\.com$/.test(location.hostn
 $("#bmLink").href = BOOKMARKLET;
 $("#bmLink").addEventListener("click", e=>{ e.preventDefault(); toast("Drag this button to your bookmarks bar, then use it on a TCDB page."); });
 const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && !c.noTcdbPhoto && ((!c.image && !c.photo) || c.replacePhoto));
-const saleSourced = c => /^(eBay|SportsCardsPro)$/.test(c.imageSource||"");
+const saleSourced = c => /^(eBay|SportsCardsPro|Sale|SCP)$/.test(c.imageSource||"");   // photos a TCDB photo replaces when TCDB has one
+// the photo of the sale that gave the price: only when TCDB and SportsCardsPro have none
+const salePic = u => /^https:\/\/i\.ebayimg\.com\//.test(u||"") ? u.replace(/s-l\d+(\.\w+)$/, "s-l1600$1") : /^https:\/\//.test(u||"") ? u : "";
 // cards with no photo at all (looked up, so player/number are known)
 const noPhoto = () => cards.filter(c=>!c.image && !c.photo && c.status!=="pending" && c.player && c.number);
 const DAY = 864e5;
@@ -2684,7 +2687,7 @@ function renderPhotoBar(){
 const photoFile = c => c.tcdbFile || (safeName(`${c.year||""} ${c.set} #${c.number} ${c.player}${c.variant?" - "+c.variant:""}`) + ".jpg");
 const cardBody = c => ({player:c.player, number:c.number, year:c.year, set:c.set, team:c.team||"", variant:c.variant||"", parallel:c.parallel||"", serial:c.serial||"", auto:!!c.auto});
 // cards TCDB has no photo for (none on the way), not searched on SportsCardsPro in the last week
-const scpList = () => noPhoto().filter(c=>!c.tcdbFile && !(c.photoTried && Date.now()-Date.parse(c.photoTried) < 7*DAY));
+const scpList = () => myCards.filter(c=>((!c.image && !c.photo) || c.imageSource==="Sale") && c.status!=="pending" && c.player && c.number && !c.tcdbFile && !(c.photoTried && Date.now()-Date.parse(c.photoTried) < 7*DAY));
 $("#findPhotos").onclick = ()=>{
   const list = scpList().slice(0, RUN_MAX); if(!list.length) return;
   LS.set("cv-findPhoto", JSON.stringify(list.map(c=>c.id)));
@@ -2706,7 +2709,7 @@ function bestSalePhoto(c, rows){
 // photos found by the bookmark: SportsCardsPro first; cards it doesn't have go to a 130point list (eBay sale photos)
 async function applyPhotoResults(results, site){
   const is130 = site==="130point";
-  const list = cards.filter(c=>c.id in results && !c.image && !c.photo);
+  const list = cards.filter(c=>c.id in results && ((!c.image && !c.photo) || c.imageSource==="Sale"));
   if(!list.length) return;
   finding = true; $("#findPhotos").disabled = $("#getPhotos").disabled = true; $("#photoBar").hidden = false;
   const got = new Map(), miss = new Set(), to130 = new Set(); let scp = 0, eb = 0, i = 0, down = false;
@@ -2725,7 +2728,7 @@ async function applyPhotoResults(results, site){
   LS.set("cv-130photo", null);   // cards SportsCardsPro has no photo of get one from their 130point sale on the next Update prices
   const now = new Date().toISOString();
   try{
-    await commit("cards", all=>all.map(c=> got.has(c.id) && !c.image && !c.photo
+    await commit("cards", all=>all.map(c=> got.has(c.id) && ((!c.image && !c.photo) || c.imageSource==="Sale")
       ? {...c, image: got.get(c.id).file, imageSource: got.get(c.id).src, tcdbFile:"", tcdbPath:"", photoTried:""}
       : miss.has(c.id) ? {...c, photoTried: now, tcdbFile:""} : c));
   }catch{}
@@ -3017,7 +3020,8 @@ async function applyPriceResults(site, results){
   const withPic = c => pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
   await commit("cards", all=>all.map(withPic).map(c=> upd.has(c.id)
-    ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null}
+    ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null,
+       ...(site==="130point" && !c.image && !c.photo && !c.tcdbFile && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale"} : {})}
     : review.has(c.id) ? {...c, priceTried: day, priceAlt:0, review: reviewOf(review.get(c.id))}
     // not found: the next search uses other words; only when that also finds nothing is the card left for a week
     : site==="130point" && miss.has(c.id) && c.priceAlt!==1 ? {...c, priceAlt:1, priceTried:""}
@@ -3372,7 +3376,7 @@ setPanel(LS.get("cv-fpanel")==="1");
 // photos come only from the TCDB checklist or from you. These ones had no "eBay" mark but are sale photos.
 const SALE_PIC_IDS = new Set(["mvh05hpnczh8om2", "mvh05hpn3y33oh8", "mvh05hpn5h2uqxq", "mvh0rwnj4482oj", "mvhg3p3rdgcecb", "mvic089vdo0ebd", "mvim43ue33l8lp", "mvim4ci1iwnby6", "mvim4k36wyrnw6", "mvjm38zk8c74zc", "mvjm7qw49j2jmq", "mvjm8xfioqo6c5", "mvjmb5j1irqd2f", "mvjmj2au7fvf7m", "mvjmjezmk0oiax", "mvjmkm33qrm1n0", "mvjmor6zlcn5iv", "mvjms5lbjofa2v", "mvjmsrigxsnoex", "mvjnfx81wjqeud", "mvjns9tvxa9t6g", "mvjny65xqia33o", "mvjnybnpmltmhc", "mvjnzpzvrowp4i", "mvjo0r6d7xzyd1", "mvjoawp580wavc", "mvjpc5dszzvcl5", "mvjpe1dggbfgnz", "mvtw6vx946ii4t"]);
 async function dropSalePhotos(){
-  const sale = myCards.filter(c=>c.image && !c.salePicGone && (saleSourced(c) || SALE_PIC_IDS.has(c.id)));
+  const sale = myCards.filter(c=>c.image && !c.salePicGone && (/^(eBay|SportsCardsPro)$/.test(c.imageSource||"") || SALE_PIC_IDS.has(c.id)));
   if(!sale.length) return;
   const ids = new Set(sale.map(c=>c.id)), keys = sale.map(photoKey);
   try{ await commit("cards", list=>list.map(c=> ids.has(c.id) ? {...c, image:"", imageSource:"", replacePhoto:false, salePicGone:true} : c));
@@ -3963,7 +3967,7 @@ $("#cdActs").onclick = async e=>{
     if(!e.target.dataset.arm){ e.target.dataset.arm = "1"; e.target.textContent = "Tap again to remove the photo"; setTimeout(()=>{ if(e.target.isConnected){ delete e.target.dataset.arm; e.target.textContent = "Wrong photo"; } }, 4000); return; }
     // every copy of this card loses the photo; TCDB's photo is not downloaded for it again
     const k = dupKey(c), bad = c.image || "";
-    try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && (x.image===bad || (!bad && x.photo===c.photo)) ? {...x, image:"", photo:"", imageSource:"", tcdbFile:"", tcdbPath:"", replacePhoto:false, noTcdbPhoto:true} : x));
+    try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && (x.image===bad || (!bad && x.photo===c.photo)) ? {...x, image:"", photo:"", imageSource:"", tcdbFile:"", tcdbPath:"", replacePhoto:false, noTcdbPhoto:true, noSalePic:true} : x));
       toast("Photo removed. Add the right one with Edit."); openCardPage(myCards.find(x=>x.id===c.id)); renderPhotoBar && renderPhotoBar(); }
     catch(err){ toast("Couldn't save: " + err.message); }
   }
