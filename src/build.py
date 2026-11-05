@@ -26,11 +26,7 @@ rep("Can't reach the Card Vault server. Start it with start-card-vault.bat, then
 # with no Card Vault online behind them they still download, so they keep working with the PC app
 HELLO = ("let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};"
          "addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}")
-rep("let L;try{L=JSON.parse(s)}catch(e){alert('Card Vault: that is not a photo list');return}",
-    "let L;try{L=JSON.parse(s)}catch(e){alert('Card Vault: that is not a photo list');return}" + HELLO)
-rep("if(!b)continue;const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cardvault - '+n;document.body.appendChild(a);a.click();a.remove();ok++;",
-    "if(!b)continue;if(O){O.postMessage({cv:'photo',name:n,blob:b},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cardvault - '+n;document.body.appendChild(a);a.click();a.remove()}ok++;")
-rep("They will appear in the app in a few seconds.')", "'+(O?'They were sent to Card Vault online.':'They will appear in the app in a few seconds.'))")
+# the photos bookmark already talks to the online app (it is written that way in the app)
 rep("let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}",
     "let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}" + HELLO)
 rep("const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({site,kind,at:new Date().toISOString(),results:out})],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a;",

@@ -254,6 +254,7 @@ addEventListener("message", e => {
     });
     return;
   }
+  if(d.cv === "tcdbNone" && Array.isArray(d.names)){ photoQ = photoQ.then(() => window.markTcdbNone && window.markTcdbNone(d.names)); return; }
   if(d.cv === "photo" && d.blob && d.name){
     const name = String(d.name).replace(/[\\/:*?"<>|]/g, " ").trim();
     photoQ = photoQ.then(async () => {

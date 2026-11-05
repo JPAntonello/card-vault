@@ -1083,6 +1083,7 @@ addEventListener("message", e => {
     });
     return;
   }
+  if(d.cv === "tcdbNone" && Array.isArray(d.names)){ photoQ = photoQ.then(() => window.markTcdbNone && window.markTcdbNone(d.names)); return; }
   if(d.cv === "photo" && d.blob && d.name){
     const name = String(d.name).replace(/[\\/:*?"<>|]/g, " ").trim();
     photoQ = photoQ.then(async () => {
@@ -2455,10 +2456,16 @@ $("#pickAdd").onclick=async ()=>{
 $("#clModes").onclick=e=>{ const b=e.target.closest("[data-cl]"); if(b){ filt.cl=b.dataset.cl; saveFilt(); render(); } };
 $("#clSub").addEventListener("change",e=>{ filt.sub=e.target.value; saveFilt(); render(); });
 /* ---------- TCDB photos waiting to be downloaded ---------- */
-const BOOKMARKLET = "javascript:(async()=>{if(!/tcdb\\.com$/.test(location.hostname)){alert('Card Vault: this is the photos bookmark, for TCDB. On '+location.hostname+' click the Card Vault search bookmark instead.');return}let s=decodeURIComponent((location.hash.match(/cardvault=([^&]*)/)||[])[1]||'');if(!s)s=prompt('Paste the Card Vault photo list');if(!s)return;let L;try{L=JSON.parse(s)}catch(e){alert('Card Vault: that is not a photo list');return}let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}let ok=0;for(const [u,n,v] of L){try{let b=null;for(const p of [u,v].filter(Boolean)){const r=await fetch(p);if(!r.ok)continue;const x=await r.blob();if(/image/.test(x.type)&&x.size>2000){b=x;break}}if(!b)continue;if(O){O.postMessage({cv:'photo',name:n,blob:b},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cardvault - '+n;document.body.appendChild(a);a.click();a.remove()}ok++;await new Promise(r=>setTimeout(r,800))}catch(e){}}alert('Card Vault: '+ok+' of '+L.length+' photos downloaded. '+(O?'They were sent to Card Vault online.':'They will appear in the app in a few seconds.'))})()";
+const BOOKMARKLET = "javascript:(async()=>{if(!/tcdb\\.com$/.test(location.hostname)){alert('Card Vault: this is the photos bookmark, for TCDB. On '+location.hostname+' click the Card Vault search bookmark instead.');return}let s=decodeURIComponent((location.hash.match(/cardvault=([^&]*)/)||[])[1]||'');if(!s)s=prompt('Paste the Card Vault photo list');if(!s)return;let L;try{L=JSON.parse(s)}catch(e){alert('Card Vault: that is not a photo list');return}let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}const box=document.createElement('div');box.style.cssText='position:fixed;z-index:2147483647;top:12px;right:12px;max-width:380px;background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 16px #0006';document.body.appendChild(box);let ok=0,none=[],blocked=0;const W=ms=>new Promise(r=>setTimeout(r,ms));for(let i=0;i<L.length;i++){const [u,n,v]=L[i];box.textContent='Card Vault: TCDB photo '+(i+1)+' of '+L.length+' \u00b7 '+ok+' found, '+none.length+' not on TCDB (keep this tab open)';let b=null,bl=0;for(const p of [u,v].filter(Boolean)){let r=null;try{r=await fetch(p)}catch(e){bl=1;continue}if(r.status===403||r.status===429){bl=1;continue}if(!r.ok)continue;const x=await r.blob();if(/image/.test(x.type)&&x.size>2000){b=x;break}}if(!b){if(bl){blocked++;if(blocked>=3)break;await W(20000)}else none.push(n);await W(700);continue}blocked=0;if(O){O.postMessage({cv:'photo',name:n,blob:b},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cardvault - '+n;document.body.appendChild(a);a.click();a.remove()}ok++;await W(800)}if(O&&none.length)O.postMessage({cv:'tcdbNone',names:none},'*');box.textContent='Card Vault: '+ok+' photo'+(ok===1?'':'s')+' '+(O?'sent to Card Vault':'downloaded')+' \u00b7 '+none.length+' not on TCDB'+(O&&none.length?' (they go to the SportsCardsPro search)':'')+(blocked>=3?'. TCDB stopped answering (security check or too many requests): reload this page, pass the check if one appears, then click From TCDB in the app again.':'. Done.');})()";
 $("#bmLink").href = BOOKMARKLET;
 $("#bmLink").addEventListener("click", e=>{ e.preventDefault(); toast("Drag this button to your bookmarks bar, then use it on a TCDB page."); });
-const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && !c.noTcdbPhoto && ((!c.image && !c.photo) || c.replacePhoto));
+// a TCDB photo that TCDB doesn't have (the bookmark found none) is not asked for again for 30 days
+const tcdbNoneNow = c => c.tcdbNone && Date.now()-Date.parse(c.tcdbNone) < 30*DAY;
+const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && !c.noTcdbPhoto && !tcdbNoneNow(c) && ((!c.image && !c.photo) || c.replacePhoto));
+async function markTcdbNone(names){
+  const set = new Set(names||[]); if(!set.size) return;
+  try{ await commit("cards", all=>all.map(c=> c.tcdbFile && set.has(c.tcdbFile) ? {...c, tcdbNone: isoDay()} : c)); renderPhotoBar(); }catch{}
+}
 const saleSourced = c => /^(eBay|SportsCardsPro|Sale|SCP)$/.test(c.imageSource||"");   // photos a TCDB photo replaces when TCDB has one
 // the photo of the sale that gave the price: only when TCDB and SportsCardsPro have none
 const salePic = u => /^https:\/\/i\.ebayimg\.com\//.test(u||"") ? u.replace(/s-l\d+(\.\w+)$/, "s-l1600$1") : /^https:\/\//.test(u||"") ? u : "";
@@ -2687,7 +2694,7 @@ function renderPhotoBar(){
 const photoFile = c => c.tcdbFile || (safeName(`${c.year||""} ${c.set} #${c.number} ${c.player}${c.variant?" - "+c.variant:""}`) + ".jpg");
 const cardBody = c => ({player:c.player, number:c.number, year:c.year, set:c.set, team:c.team||"", variant:c.variant||"", parallel:c.parallel||"", serial:c.serial||"", auto:!!c.auto});
 // cards TCDB has no photo for (none on the way), not searched on SportsCardsPro in the last week
-const scpList = () => myCards.filter(c=>((!c.image && !c.photo) || c.imageSource==="Sale") && c.status!=="pending" && c.player && c.number && !c.tcdbFile && !(c.photoTried && Date.now()-Date.parse(c.photoTried) < 7*DAY));
+const scpList = () => myCards.filter(c=>((!c.image && !c.photo) || c.imageSource==="Sale") && c.status!=="pending" && c.player && c.number && (!c.tcdbFile || tcdbNoneNow(c)) && !(c.photoTried && Date.now()-Date.parse(c.photoTried) < 7*DAY));
 $("#findPhotos").onclick = ()=>{
   const list = scpList().slice(0, RUN_MAX); if(!list.length) return;
   LS.set("cv-findPhoto", JSON.stringify(list.map(c=>c.id)));
