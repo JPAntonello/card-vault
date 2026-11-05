@@ -2615,7 +2615,11 @@ function cardMatch(title, c, strict){
     }
   }
   const parW = wordSet(c.parallel).split(" ");
-  for(const w of wordSet(c.variant).split(" ")) if(w && !/^[\d\/]/.test(w) && !SET_STOP.has(w) && !parW.includes(w) && !t.includes(" "+w)) return -1;
+  // an insert's own code in the title ("#CA-DY") already names the insert: sellers shorten its name ("Consequential Autographs" -> "Auto")
+  const codeHit = !noNum && /[a-z]/.test(num) && /\d|-|[a-z]{2,}/.test(num) && num.length >= 3;
+  const autoW = /\b(auto|autos|autograph|autographs|autographed|signed|signature|signatures)\b/.test(t);
+  for(const w of wordSet(c.variant).split(" ")) if(w && !/^[\d\/]/.test(w) && !SET_STOP.has(w) && !parW.includes(w) && !t.includes(" "+w)
+    && !codeHit && !(/^(autographs?|signatures?)$/.test(w) && autoW)) return -1;
   const ys = String(c.year||"").match(/\d{2,4}/g) || [];
   if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `].some(k=>t.includes(k))) return -1; }
   const set = nrm(c.set).replace(/\bpl\b/g,"premier league");
@@ -2649,14 +2653,14 @@ function cardMatch(title, c, strict){
       for(const ph of globalPhrases()) if(!ownG.includes(" "+ph+" ") && tG.includes(" "+ph+" ")) return -1;
       for(const ph of blockedFor(c)) if(t.includes(" "+ph+" ")) return -1; }
     // rare versions sellers name (SSP, Plum Blossom, Diamond…): only when this card is that version
-    { const mine = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp short print var variation" : ""} ${set} ${nrm(c.team)} ${/\battax\b/.test(set) ? "diamond" : ""} `;   // Turbo/Match Attax: "Diamond" cards are base cards
+    { const mine = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp short print var variation" : ""} ${c.serial || c.auto ? "sp" : ""} ${set} ${nrm(c.team)} ${/\battax\b/.test(set) ? "diamond" : ""} `;   // Turbo/Match Attax: "Diamond" cards are base cards
       for(const m of t.matchAll(new RegExp("\\b("+RARE_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return -1; }
     if(/\b(lot|lots|you pick|u pick|choose|complete set|pick your|break|box)\b/.test(t)) return -1;
     if(!c.auto && /\b(auto|autograph|signed)\b/.test(t)) return -1;
     if(!c.serial && hasPrintRun(t)) return -1;
     if(/\b(psa|bgs|sgc|cgc|mgc|beckett|graded|gem mint)\b/.test(t)) return -1;
   }
-  const known = new Set(nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp" : ""} ${c.team} ${c.year} ${c.number} premier league`).split(" "));
+  const known = new Set(nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp" : ""} ${c.auto ? "auto autos autograph autographed signed" : ""} ${c.serial || c.auto ? "sp" : ""} ${c.team} ${c.year} ${c.number} premier league`).split(" "));
   let extra = 0; const unknown = [];
   const knownTxt = " " + nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${c.team}`) + " ";
   const means = w => (WORD_MEANS[w]||[]).some(m => knownTxt.includes(" "+m+" "));
