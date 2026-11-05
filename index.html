@@ -2529,7 +2529,7 @@ const nrm = s => !s ? "" : String(s).replace(/[øØ]/g,"o").replace(/[æÆ]/g,"a
   .normalize("NFD").replace(/\p{Mn}/gu,"").toLowerCase().replace(/[^a-z0-9#\[\]\/ ]/g," ").replace(/\s+/g," ").trim();
 const wordSet = s => [...new Set(nrm(s).split(" ").filter(w=>w && !/^prizms?$/.test(w)))].sort().join(" ");
 // short forms sellers use: the word is known when the card itself has one of these meanings
-const WORD_MEANS = {wc:["world cup","wc"], rated:["rated rookie","rated rookies","rated"], usmnt:["united states","usa","usmnt","us men s national team"], usa:["united states","usmnt"]};
+const WORD_MEANS = {wc:["world cup","wc"], rated:["rated rookie","rated rookies","rated"], usmnt:["united states","usa","usmnt","us men s national team"], usa:["united states","usmnt"], epl:["premier league"]};
 const SET_STOP = new Set("panini topps soccer fifa uefa the of to set team road club competitions champions league pl premier world cup edition football futbol cards card and x".split(" "));
 const PAR_WORDS = "pixel|bronze|aqua|icy|kaleidoscopic|refractor|parallel|holo|optic|cubic|silver|gold|green|purple|orange|blue|red|pink|black|white|yellow|teal|wave|shimmer|mojo|sparkle|foil|breakaway|disco|hyper|pulsar|choice|cracked|ice|velocity|laser|lazer|camo|snakeskin|scope|circles|reactive|genesis|fluorescent|speckle|halo|static";
 // the names of the set's versions, from its checklist: "big apple", "aqua lava refractor" and "aqua lava", "club country"…
@@ -2598,7 +2598,7 @@ function hasPrintRun(t){
   return false;
 }
 function cardMatch(title, c, strict){
-  const t = (" " + nrm(title) + " ").replace(/ wc /g, " wc world cup ").replace(/ usmnt /g, " usmnt united states ");
+  const t = (" " + nrm(title) + " ").replace(/ wc /g, " wc world cup ").replace(/ usmnt /g, " usmnt united states ").replace(/ epl /g, " epl premier league ");
   const last = nrm(c.player).split(" ").pop(); if(!last || !t.includes(last)) return -1;
   const num = nrm(String(c.number||"")).replace(/^#/,"");
   let noNum = false;
