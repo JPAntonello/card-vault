@@ -2819,7 +2819,7 @@ function priceFromSales(c, sales, rates){
   const all = [];
   for(const [title, price, curr, date, url, img] of sales||[]){
     const r = curr==="USD" || !curr ? 1 : Number(rates[curr]);
-    if(!(price>0) || !(r>0) || !date || cardMatch(title, c, false) < 0) continue;
+    if(!(price>0) || !(r>0) || !date || (c.badSales||[]).some(b=>sameUrl(b, url)) || cardMatch(title, c, false) < 0) continue;
     all.push({usd: price/r, date: String(date).slice(0,10), url: ebayLink(url), title, img: img||"", info: cardMatch.info||{}});
   }
   if(!all.length) return null;
@@ -3937,6 +3937,7 @@ function openCardPage(c){
     ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">Search 130point now</button>`:""}
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
     <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
+    ${c.valueUrl && /ebay/i.test(c.valueSource||"") ? `<button type="button" class="btn ghost" id="cdBadSale" title="This sale is not your card: the price is removed and the next 130point search skips this sale">Wrong sale</button>` : ""}
     ${c.image||c.photo?`<button type="button" class="btn ghost" id="cdBadPic" title="Removes this photo from the card; TCDB's photo is not taken again. Add your own with Edit.">Wrong photo</button>`:""}`;
   $("#scrim").hidden = $("#cardDrawer").hidden = false;
 }
@@ -3947,6 +3948,12 @@ $("#cdActs").onclick = async e=>{
   else if(e.target.id==="cdPrice"){ closeDrawers(); price130([c]); }
   else if(e.target.id==="cdCopies"){ closeDrawers(); openCopies(myCards.filter(x=>dupKey(x)===dupKey(c)).map(x=>x.id)); }
   else if(e.target.id==="cdGone"){ closeDrawers(); c.gone ? bringBack(c) : openGone(c); }
+  else if(e.target.id==="cdBadSale"){
+    const k = dupKey(c), bad = c.valueUrl;
+    try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && x.valueUrl && sameUrl(x.valueUrl, bad) ? {...x, value:"", valueDate:"", valueSource:"", valueNote:"Wrong sale removed: the next search skips it", valueUrl:"", valueSales:[], priceTried:"", priceAlt:0, review:null, badSales:[...new Set([...(x.badSales||[]), bad])]} : x));
+      toast("Sale removed. Search 130point again for the right price."); openCardPage(myCards.find(x=>x.id===c.id)); renderPriceBar && renderPriceBar(); }
+    catch(err){ toast("Couldn't save: " + err.message); }
+  }
   else if(e.target.id==="cdBadPic"){
     if(!e.target.dataset.arm){ e.target.dataset.arm = "1"; e.target.textContent = "Tap again to remove the photo"; setTimeout(()=>{ if(e.target.isConnected){ delete e.target.dataset.arm; e.target.textContent = "Wrong photo"; } }, 4000); return; }
     // every copy of this card loses the photo; TCDB's photo is not downloaded for it again
