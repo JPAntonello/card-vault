@@ -472,6 +472,8 @@ async function start(session){
   accountButton();
   setTimeout(() => ensureBackup(false), 5000);
   if(/[#&]import\b/.test(location.hash)) openAccount();
+  if(/[#&]cvrecv\b/.test(location.hash)){ const n = document.createElement("div"); n.style.cssText = "position:fixed;z-index:9500;top:0;left:0;right:0;padding:10px 14px;background:#0071e3;color:#fff;font:14px system-ui,sans-serif;text-align:center";
+    n.textContent = "Card Vault is receiving from the bookmark: keep this window open until the bookmark says done."; document.body.appendChild(n); }
 }
 async function boot(){
   ui();
