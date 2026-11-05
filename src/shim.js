@@ -17,7 +17,7 @@ const lowP = p => String(p||"").normalize("NFC").replace(/\\/g,"/").replace(/^\/
 const pathKey = p => { const s = lowP(p); return h32(s, 2166136261) + h32(s, 0x9747b28c) + s.length.toString(36); };
 const drivePath = p => uid + "/d/" + pathKey(p) + ".jpg";
 const photoPath = id => uid + "/p/" + id + ".jpg";
-window.cvDriveUrl = p => PUB + drivePath(p);
+window.cvDriveUrl = p => /^https?:\/\//.test(p) ? p : PUB + drivePath(p);
 window.cvPhotoUrl = (id, v) => PUB + photoPath(id) + "?v=" + encodeURIComponent(v||"");
 let shareIndex = {};          // photo key -> storage path (mine and friends')
 let shareMap = {};            // mine only, kept in my snapshot

@@ -534,14 +534,15 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   <section class="pend" id="photoBar" hidden aria-label="Photos">
     <div class="pend-top"><b id="photoCount"></b><small id="findInfo" class="note"></small>
       <span class="pbtns"><button type="button" class="btn" id="getPhotos">From TCDB</button>
-      <button type="button" class="btn" id="findPhotos" title="Opens SportsCardsPro to look for the photos TCDB does not have">Other sites</button>
+      <button type="button" class="btn" id="findPhotos" title="Opens SportsCardsPro to look for the photos TCDB does not have" hidden>SportsCardsPro</button>
       <button type="button" class="btn" id="find130Photos" hidden title="Opens 130point for the photos SportsCardsPro does not have (eBay sale photos)">130point</button></span></div>
     <details id="photoHelp">
       <summary title="How it works">?</summary>
       <ol>
-        <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmLink" href="#">Card Vault photos</a><br><small>Photos come only from the TCDB checklists or from you (Edit → photo). Photos are never taken from sales.</small></li>
+        <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmLink" href="#">Card Vault photos</a><br><small>Photos come from the TCDB checklists, then from SportsCardsPro's catalog pictures, or from you (Edit → photo). Never from sales.</small></li>
         <li>Click <b>From TCDB</b>. A TCDB page opens (pass its security check if one appears). Click the <b>Card Vault photos</b> bookmark there and keep the tab open until it says done.</li>
-        <li>The photos go straight to Card Vault and the cards update by themselves. Cards TCDB has no photo for keep "No photo yet": add yours with <b>Edit</b>.</li>
+        <li>The photos go straight to Card Vault and the cards update by themselves.</li>
+        <li>Cards TCDB has no photo for: click <b>SportsCardsPro</b>. A SportsCardsPro page opens: click your <b>Card Vault search</b> bookmark there (the one from the price help) and keep the tab open until it says done. Only SportsCardsPro's own picture of exactly that card and version is taken, never a sale photo. Cards it doesn't have keep "No photo yet": add yours with <b>Edit</b>.</li>
       </ol>
     </details>
   </section>
@@ -844,7 +845,7 @@ const lowP = p => String(p||"").normalize("NFC").replace(/\\/g,"/").replace(/^\/
 const pathKey = p => { const s = lowP(p); return h32(s, 2166136261) + h32(s, 0x9747b28c) + s.length.toString(36); };
 const drivePath = p => uid + "/d/" + pathKey(p) + ".jpg";
 const photoPath = id => uid + "/p/" + id + ".jpg";
-window.cvDriveUrl = p => PUB + drivePath(p);
+window.cvDriveUrl = p => /^https?:\/\//.test(p) ? p : PUB + drivePath(p);
 window.cvPhotoUrl = (id, v) => PUB + photoPath(id) + "?v=" + encodeURIComponent(v||"");
 let shareIndex = {};          // photo key -> storage path (mine and friends')
 let shareMap = {};            // mine only, kept in my snapshot
@@ -1786,7 +1787,7 @@ function cardTile(c, totalQty, group){
 /* ---------- Drive image picker ---------- */
 let driveFiles = null, driveOk = true, driveDir = "", chosenImage = "", imgQTouched = false;
 const norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-const driveUrl = p => cvDriveUrl(p);
+const driveUrl = p => cvDriveUrl(p);   // SportsCardsPro photos are kept as their web address
 const photoSrc = (id, v) => cvPhotoUrl(id, v);
 const cardImg = c => c.photo ? photoSrc(c.photo, c.photoV) : c.image ? driveUrl(c.image) : "";
 /* TCDB photo: chosen by default; saved into the Drive folder when the card is saved */
@@ -2669,10 +2670,11 @@ function renderPhotoBar(){
   if(finding) return;
   const n = pendingPhotos().length, m = noPhoto().length;
   // photos come from the set's TCDB checklist (sale photos from 130point were often of another card)
-  $("#photoBar").hidden = !n; $("#findPhotos").hidden = true;
+  const s = scpList().length;
+  $("#photoBar").hidden = !n && !s; $("#findPhotos").hidden = !s; $("#findPhotos").textContent = `SportsCardsPro (${Math.min(s, RUN_MAX)})`;
   $("#getPhotos").hidden = !n;
   const rp = pendingPhotos().filter(c=>c.replacePhoto).length;
-  $("#photoCount").textContent = n ? `${n} TCDB photo${n===1?"":"s"} to download` + (rp ? ` (${rp} replace an eBay photo)` : "") : `${m} without a photo`;
+  $("#photoCount").textContent = (n ? `${n} TCDB photo${n===1?"":"s"} to download` + (rp ? ` (${rp} replace an eBay photo)` : "") : "") + (s ? `${n?" · ":""}${s} not on TCDB: look on SportsCardsPro` : "") || `${m} without a photo`;
   const tried = noPhoto().filter(c=>c.photoTried).length, w = lsList("cv-findPhoto").length;
   const ids = new Set(noPhoto().map(c=>c.id)), w130 = lsList("cv-130photo").filter(id=>ids.has(id)).length;
   $("#find130Photos").hidden = true;
@@ -2681,8 +2683,10 @@ function renderPhotoBar(){
 }
 const photoFile = c => c.tcdbFile || (safeName(`${c.year||""} ${c.set} #${c.number} ${c.player}${c.variant?" - "+c.variant:""}`) + ".jpg");
 const cardBody = c => ({player:c.player, number:c.number, year:c.year, set:c.set, team:c.team||"", variant:c.variant||"", parallel:c.parallel||"", serial:c.serial||"", auto:!!c.auto});
+// cards TCDB has no photo for (none on the way), not searched on SportsCardsPro in the last week
+const scpList = () => noPhoto().filter(c=>!c.tcdbFile && !(c.photoTried && Date.now()-Date.parse(c.photoTried) < 7*DAY));
 $("#findPhotos").onclick = ()=>{
-  const list = toSearch(); if(!list.length) return;
+  const list = scpList().slice(0, RUN_MAX); if(!list.length) return;
   LS.set("cv-findPhoto", JSON.stringify(list.map(c=>c.id)));
   openFind("scp", "photo", list.map(c=>[c.id, ...scpQueries(c)]));
   $("#photoHelp").open = true; renderPhotoBar();
@@ -2710,7 +2714,8 @@ async function applyPhotoResults(results, site){
     i++; $("#photoCount").textContent = `Saving photos… ${i} of ${list.length} · ${got.size} found`;
     let body = null;
     if(is130){ if(results[c.id]===null) continue; const u = bestSalePhoto(c, results[c.id]); if(!u){ miss.add(c.id); continue; } body = {file: photoFile(c), url: u}; }
-    else { const hit = bestScpRow(c, results[c.id], "photo"); if(!hit){ to130.add(c.id); continue; } body = {file: photoFile(c), img: hit.img}; }
+    else { const hit = bestScpRow(c, results[c.id], "photo"); if(!hit || !/^[A-Za-z0-9]{6,64}$/.test(hit.img||"")){ miss.add(c.id); continue; }
+      got.set(c.id, {file: `https://storage.googleapis.com/images.pricecharting.com/${hit.img}/1600.jpg`, src:"SCP"}); scp++; continue; }
     let r = null;
     try{ const res = await fetch("/api/save-photo", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); r = res.ok ? await res.json() : null; }catch{}
     if(r && r.ok){ got.set(c.id, {file:r.file, src:r.source}); if(r.source==="eBay") eb++; else scp++; }
@@ -2726,7 +2731,7 @@ async function applyPhotoResults(results, site){
   }catch{}
   finding = false; $("#findPhotos").disabled = $("#getPhotos").disabled = false;
   await loadDrive(); render(); renderPhotoBar();
-  toast(`${got.size} photo${got.size===1?"":"s"} found (${scp} SportsCardsPro, ${eb} eBay)` + (to130.size ? ` · ${to130.size} will get a photo with Update prices (130point)` : "") + (miss.size ? ` · ${miss.size} not found` : "") + (down ? " · some photos could not be downloaded" : ""));
+  toast(`${got.size} photo${got.size===1?"":"s"} found on SportsCardsPro` + (miss.size ? ` · ${miss.size} not found` : "") + (down ? " · some photos could not be downloaded" : ""));
 }
 
 /* ---------- prices ---------- */

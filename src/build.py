@@ -15,7 +15,7 @@ def rep(old, new, count=1):
     h = h.replace(old, new)
 
 # photo addresses
-rep('const driveUrl = p => "/drive/" + encodeURIComponent(p);', 'const driveUrl = p => cvDriveUrl(p);')
+rep('const driveUrl = p => /^https?:\\/\\//.test(p) ? p : "/drive/" + encodeURIComponent(p);', 'const driveUrl = p => cvDriveUrl(p);')
 rep('const photoSrc = (id, v) => "/photos/" + encodeURIComponent(id) + ".jpg?v=" + encodeURIComponent(v||"");', 'const photoSrc = (id, v) => cvPhotoUrl(id, v);')
 rep('<img src="/shared/${esc(c.pk)}.jpg" alt="" loading="lazy">', '<img src="${esc(cvSharedUrl(c.pk))}" alt="" loading="lazy">')
 # texts
