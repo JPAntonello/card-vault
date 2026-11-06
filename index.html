@@ -1307,7 +1307,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793993374";
+const BUILD = "1793993847";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4002,7 +4002,7 @@ function specsProblem(c, specs){
   if(yes(graded) || (grader && !/^(n\/?a|none|no|ungraded)/i.test(grader)) || (grade && /\d/.test(grade) && !/ungraded/i.test(grade))) return {hard:"graded"};
   const runN = (run.match(/\d+/)||[])[0], mine = String(c.serial||"").replace(/\D/g,"");
   if(runN && !mine) return {hard:"numbered /" + runN};
-  if(runN && mine && runN!==mine) return {hard:"numbered /" + runN};
+  if(runN && mine && runN!==mine && !(/or less/i.test(c.serial||"") && +runN <= +mine)) return {hard:"numbered /" + runN};   // "/99 or less": each card has its own run
   if(yes(numbered) && !mine) return {hard:"numbered"};
   if(num && c.number && normNum(num) && normNum(num)!==normNum(c.number) && normNum(num).replace(/[A-Z]$/,"")!==normNum(c.number).replace(/[A-Z]$/,"")) return {hard:"card #" + num};
   const pv = nrm(par).replace(/\b(prizms?|refractors?|parallels?)\b/g,"").trim();
