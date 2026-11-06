@@ -1309,7 +1309,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794002394";
+const BUILD = "1794002721";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2732,7 +2732,7 @@ function cardMatch(title, c, strict){
     for(const m of t.matchAll(new RegExp("\\b("+OTHER_SETS+")\\b","g"))) if(!ownLine.includes(" "+m[1]+" ") && !(m[1]==="prizm" && ownNamed)) return -1;   // a different product line
     // every parallel and insert of the set's checklist (Big Apple, Lava, Mini-Diamonds…): only when this card is that version
     { const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${nrm(c.team)} ${ownTags(c)} ${/\bholo\b/.test(nrm(c.parallel)) && /\bholo\b/.test(t) ? "silver holo silver silver holo silver prizm holo prizm" : ""} `;   // the team counts as known ("Red" in "Red Bull Salzburg")
-      for(const ph of versionPhrases(c.setId)) if(!own.includes(" "+ph+" ") && t.includes(" "+ph+" ")) return -1;
+      for(const ph of versionPhrases(c.setId)) if(!own.includes(" "+ph+" ") && !(" "+set+" ").includes(" "+ph+" ") && t.includes(" "+ph+" ")) return -1;   // "Gold" of "Topps Gold" names the set
       const cat0 = catalogs[c.setId]; const ownW = own + ` ${set} ${nrm(c.player)} ` + (!c.parallel && cat0 && cat0.parallels.some(p=>/^common\b/i.test(p.name)) ? " common yellow " : "");
       for(const w of (catalogs[c.setId]||{})._words||[]) if(!ownW.includes(" "+w+" ") && t.includes(" "+w+" ")) return -1;
       // versions named in any of your checklists ("Heat Vision", "Spectrum"…) and words you marked "not my card" for this set
