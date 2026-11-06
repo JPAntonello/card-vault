@@ -1309,7 +1309,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793998478";
+const BUILD = "1794000642";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2704,7 +2704,7 @@ function cardMatch(title, c, strict){
   for(const w of wordSet(c.variant).split(" ")) if(w && !/^[\d\/]/.test(w) && !SET_STOP.has(w) && !parW.includes(w) && !t.includes(" "+w)
     && !codeHit && !(/^(autographs?|signatures?)$/.test(w) && autoW)) return -1;
   const ys = String(c.year||"").match(/\d{2,4}/g) || [];
-  if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `].some(k=>t.includes(k))) return -1; }
+  if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; const yy = String(y).slice(2); if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `,` ${y-1} ${yy} `,` ${y-1}/${yy} `,` ${y-1} ${y} `].some(k=>t.includes(k))) return -1; }   // "2026" cards are sold as "2025-26"
   const set = nrm(c.set).replace(/\bpl\b/g,"premier league");
   for(const w of set.split(" ")) if(w && !/^\d/.test(w) && !SET_STOP.has(w) && !t.includes(" "+w+" ")) return -1;
   // a team set is sold as "... Team Set": a card of the same team from another product is not it
@@ -2716,7 +2716,7 @@ function cardMatch(title, c, strict){
     const br = (t.match(/\[([^\]]+)\]/)||[])[1] || "";
     if(wordSet(br) !== wordSet(par)) return -1;
   } else {
-    for(const w of wordSet(par).split(" ")){ if(!w) continue;
+    for(const w of wordSet(par).split(" ")){ if(!w || (w==="refractor" && wordSet(par)!=="refractor")) continue;   // "Green Refractor" is sold as "Green /99"
       const need = (" "+set+" ").includes(" "+w+" ") ? 2 : 1;
       if((t.match(new RegExp("(?<![a-z0-9])"+reEsc(w),"g"))||[]).length < need) return -1; }
     // "Holo" parallels are sold as "Holo Silver" / "Silver Holo"
