@@ -1309,7 +1309,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794001437";
+const BUILD = "1794002394";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4007,10 +4007,10 @@ function specsProblem(c, specs){
   if(runN && !mine) return {hard:"numbered /" + runN};
   if(runN && mine && runN!==mine && !(/or less/i.test(c.serial||"") && +runN <= +mine)) return {hard:"numbered /" + runN};   // "/99 or less": each card has its own run
   if(yes(numbered) && !mine) return {hard:"numbered"};
-  if(num && c.number && normNum(num) && normNum(num)!==normNum(c.number) && normNum(num).replace(/[A-Z]$/,"")!==normNum(c.number).replace(/[A-Z]$/,"")) return {hard:"card #" + num};
+  if(num && c.number && !/^#?nno$/i.test(String(c.number)) && normNum(num) && normNum(num)!==normNum(c.number) && normNum(num).replace(/[A-Z]$/,"")!==normNum(c.number).replace(/[A-Z]$/,"")) return {hard:"card #" + num};
   const pv = nrm(par).replace(/\b(prizms?|refractors?|parallels?)\b/g,"").trim();
   if(pv && !/^(base|n ?a|na|none|no|standard|regular|base set|common|common yellow|rc|rookie|non parallel|not applicable)$/.test(pv)){
-    const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} `;
+    const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${nrm(c.set)} `;   // "Gold" of "Topps Gold"
     if(!pv.split(" ").some(w=>w.length>2 && own.includes(" "+w+" "))) return {soft:`eBay lists its version as "${par}"`};
   }
   return {};
