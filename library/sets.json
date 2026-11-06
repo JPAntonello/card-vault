@@ -999,5 +999,16 @@
     "count": 422,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/379621/2023-Donruss-FIFA-Womens-World-Cup",
     "note": "TCDB: 2023 Donruss FIFA Womens World Cup · 10 subsets · 41 parallels"
+  },
+  {
+    "id": "mvtgoldwalker2425",
+    "year": "2024/25",
+    "name": "Topps Gold x WalkerTKL UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T20:49:35.000Z",
+    "count": 214,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/500507/2024-25-Topps-Gold-UEFA-Club-Competitions",
+    "note": "TCDB: 2024 25 Topps Gold UEFA Club Competitions · 2 subsets · 14 parallels"
   }
 ]
