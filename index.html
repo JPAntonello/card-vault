@@ -1302,7 +1302,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793981593";
+const BUILD = "1793982296";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2941,8 +2941,9 @@ function priceFromSales(c, sales, rates){
   const med = l => { const v = l.map(s=>s.usd).sort((p,q)=>p-q), m = v.length>>1; return v.length%2 ? v[m] : (v[m-1]+v[m])/2; };
   let skipped = 0, x = null;
   for(const s of all){
+    // judged only against at least 3 other sales: with 1 or 2 a single cheap sale would push out the real price
     const others = all.filter(o=>o!==s).slice(0,10);
-    if(others.length){ const m = med(others); if(s.usd > m*3 || (others.length>=2 && s.usd < m/4)){ skipped++; continue; } }
+    if(others.length>=3){ const m = med(others); if(s.usd > m*3 || s.usd < m/4){ skipped++; continue; } }
     x = s; break;
   }
   if(!x){ x = all[0]; skipped = 0; }
