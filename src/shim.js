@@ -254,6 +254,8 @@ addEventListener("message", e => {
     });
     return;
   }
+  // the bookmark finished: the small receiving window closes once everything it got is saved
+  if(d.cv === "done"){ if(/[#&]cvrecv\b/.test(location.hash)) photoQ.then(() => new Promise(r => setTimeout(r, 6000))).then(async () => { await saveImagesNow().catch(()=>{}); window.close(); }); return; }
   if(d.cv === "tcdbNone" && Array.isArray(d.names)){ photoQ = photoQ.then(() => window.markTcdbNone && window.markTcdbNone(d.names)); return; }
   if(d.cv === "photo" && d.blob && d.name){
     const name = String(d.name).replace(/[\\/:*?"<>|]/g, " ").trim();

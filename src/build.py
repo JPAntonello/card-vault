@@ -29,7 +29,7 @@ rep("Can't reach the Card Vault server. Start it with start-card-vault.bat, then
 # with no Card Vault online behind them they still download, so they keep working with the PC app
 HELLO = ("let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};"
          "addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}"
-         + "if(!O){try{const w=window.open('https://jpantonello.github.io/card-vault/#cvrecv','cvrecv','width=460,height=360');if(w){await new Promise(r=>{let k=0;const h=e=>{if(e.source===w&&e.data&&e.data.cv==='ack'){O=w;removeEventListener('message',h);clearInterval(t);r()}};addEventListener('message',h);const t=setInterval(()=>{try{w.postMessage({cv:'hello'},'*')}catch(e){}if(++k>60){clearInterval(t);removeEventListener('message',h);r()}},500)})}}catch(e){}}")
+         + "if(!O&&!J.k){try{const w=window.open('https://jpantonello.github.io/card-vault/#cvrecv','cvrecv','width=460,height=360');if(w){await new Promise(r=>{let k=0;const h=e=>{if(e.source===w&&e.data&&e.data.cv==='ack'){O=w;removeEventListener('message',h);clearInterval(t);r()}};addEventListener('message',h);const t=setInterval(()=>{try{w.postMessage({cv:'hello'},'*')}catch(e){}if(++k>60){clearInterval(t);removeEventListener('message',h);r()}},500)})}}catch(e){}}")
 # the photos bookmark already talks to the online app (it is written that way in the app)
 rep("let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}",
     "let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}" + HELLO)
