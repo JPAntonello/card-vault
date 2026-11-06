@@ -1309,7 +1309,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794000642";
+const BUILD = "1794001005";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2686,10 +2686,10 @@ function cardMatch(title, c, strict){
   const num = nrm(String(c.number||"")).replace(/^#/,"");
   let noNum = false;
   if(num && !new RegExp((strict ? "#" : "(?<![a-z0-9/])(?<!\\d{4} )#?") + reEsc(num) + "(?![a-z0-9/])").test(t)){
-    if(strict || num==="nno") return -1;
+    if(strict) return -1;   // NNO (no number) cards are sold without one: same as a seller leaving the number out
     // "196b" (an image variation) is often sold as "#196 ... Image Variation": the base number plus the variation's name
     const nb = num.match(/^(\d+)[a-z]$/), sub = nrm(ownSub(c)).replace(/\bvariations?\b/g,"").trim();
-    if(nb && sub && sub!=="base" && new RegExp("(?<![a-z0-9/])#?" + nb[1] + "(?![a-z0-9/])").test(t) && t.includes(" "+sub+" ")) { /* this card */ }
+    if(num!=="nno" && nb && sub && sub!=="base" && new RegExp("(?<![a-z0-9/])#?" + nb[1] + "(?![a-z0-9/])").test(t) && t.includes(" "+sub+" ")) { /* this card */ }
     else {
     // the seller left the number out: fine only when the title names no other card number
     const tk = t.trim().split(" ");
@@ -2723,7 +2723,8 @@ function cardMatch(title, c, strict){
     if(par){ const mine = ` ${wordSet(par)} ${set} ${nrm(c.team)} ${/\bholo\b/.test(wordSet(par)) && /\bholo\b/.test(t) ? "silver" : ""} `;
       for(const m of t.matchAll(new RegExp("\\b("+PAR_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return -1; }
     else {
-      if(new RegExp("\\b("+PAR_WORDS+"|sp|ssp)\\b").test(t) && !/\b(optic|chrome)\b/.test(set)) return -1;
+      const tNoSet = set.split(" ").reduce((s,w)=> w ? s.replace(new RegExp(" "+reEsc(w)+" ","g")," ") : s, t);   // "Gold" in "Topps Gold" names the set, not a parallel
+      if(new RegExp("\\b("+PAR_WORDS+"|sp|ssp)\\b").test(tNoSet) && !/\b(optic|chrome)\b/.test(set)) return -1;
       if(!set.includes("mosaic") && /\bmosaic\b/.test(t)) return -1;
     }
     // "Prizm" after a Donruss/Optic/Select card's own product name is how sellers say "shiny" ("Optic Holo Silver Prizm")
