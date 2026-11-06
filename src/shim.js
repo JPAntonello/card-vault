@@ -459,6 +459,22 @@ async function importDownloads(files){
   finally{ busy = false; }
 }
 
+/* ---------- new version published: offer to load it ---------- */
+const BUILD = "__CV_BUILD__";
+async function checkVersion(){
+  try{
+    const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
+    const m = h.match(/const BUILD = "(\d+)"/);
+    if(m && m[1] !== BUILD && !$$("#cvNew")){
+      const n = document.createElement("div"); n.id = "cvNew";
+      n.style.cssText = "position:fixed;z-index:9400;left:50%;transform:translateX(-50%);bottom:76px;background:#0071e3;color:#fff;padding:10px 16px;border-radius:999px;font:14px system-ui,sans-serif;box-shadow:0 6px 20px #0005;cursor:pointer";
+      n.textContent = "A new version of Card Vault is ready · click to update"; n.onclick = () => { location.replace(location.pathname + "?v=" + m[1] + location.hash); };
+      document.body.appendChild(n);
+    }
+  }catch{}
+}
+setInterval(checkVersion, 3*60*1000); setTimeout(checkVersion, 20000);
+
 /* ---------- start ---------- */
 async function start(session){
   if(started) return; started = true;

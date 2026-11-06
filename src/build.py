@@ -7,6 +7,8 @@ SB_URL = "https://xqtzocgsmcnhlqenjefa.supabase.co"; SB_KEY = "sb_publishable_03
 SB_JS = sys.argv[4] if len(sys.argv) > 4 else "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"
 h = open(src, encoding="utf-8").read()
 shim = open(shim_f, encoding="utf-8").read()
+import time
+shim = shim.replace("__CV_BUILD__", str(int(time.time())))
 
 def rep(old, new, count=1):
     global h
