@@ -1010,5 +1010,16 @@
     "count": 214,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/500507/2024-25-Topps-Gold-UEFA-Club-Competitions",
     "note": "TCDB: 2024 25 Topps Gold UEFA Club Competitions · 2 subsets · 14 parallels"
+  },
+  {
+    "id": "mvscorepl2122",
+    "year": "2021/22",
+    "name": "Panini Score Premier League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T20:54:33.000Z",
+    "count": 399,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/301324/2021-22-Score-Premier-League",
+    "note": "TCDB: 2021 22 Score Premier League · 10 subsets · 37 parallels"
   }
 ]
