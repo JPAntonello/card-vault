@@ -1302,7 +1302,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793981286";
+const BUILD = "1793981593";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3545,15 +3545,20 @@ const friendCards = name => { const f = friends.find(x=>x.name===name); return f
 const holdCache = new WeakMap();
 function holdings(list){ if(holdCache.has(list)) return holdCache.get(list);
   const m = new Map(); for(const c of list){ const k = c.k || dupKey(c); m.set(k, (m.get(k)||0) + (Number(c.qty)||1)); } holdCache.set(list, m); return m; }
+// the sets someone collects: those he has at least one card of (any version)
+const collectKey = c => c.setId || nrm(`${c.year||""} ${c.set||""}`);
+const setsCache = new WeakMap();
+function collects(list){ if(setsCache.has(list)) return setsCache.get(list);
+  const s = new Set(list.filter(c=>!c.gone).map(collectKey)); setsCache.set(list, s); return s; }
 function tradePill(c){
   if(!friends.length) return "";
   const k = c.k || dupKey(c);
   if(viewing){ // a friend's spare that I don't have
-    if((dupCount.get(k)||0) > 1 && !holdings(myCards).has(k)) return '<span class="pill need">You need</span>';
+    if((dupCount.get(k)||0) > 1 && !holdings(myCards).has(k) && collects(myCards).has(collectKey(c))) return '<span class="pill need">You need</span>';
     return "";
   }
   if((dupCount.get(k)||0) < 2) return "";
-  const who = friends.filter(f=>!holdings(f.cards).has(k)).map(f=>f.name);
+  const who = friends.filter(f=>!holdings(f.cards).has(k) && collects(f.cards).has(collectKey(c))).map(f=>f.name);
   return who.length ? `<span class="pill need" title="${esc(who.join(", "))} doesn't have this card">${esc(who.length>1 ? who.length+" friends need" : who[0]+" needs")}</span>` : "";
 }
 function renderFriendUI(){
@@ -3621,10 +3626,11 @@ let tradeSel = new Set();
 function tradeLists(name){
   const f = friends.find(x=>x.name===name); if(!f) return {give:[], get:[]};
   const mine = holdings(myCards), his = holdings(f.cards);
-  const one = (list, have, other) => { const seen = new Set(); return list.filter(c=>{ const k = c.k || dupKey(c);
-    if(seen.has(k) || (have.get(k)||0) < 2 || other.has(k)) return false; seen.add(k); return true; }).map(c=>({c, k: c.k || dupKey(c), spare:(have.get(c.k || dupKey(c))||0)-1})); };
+  // only cards of sets the other one collects
+  const one = (list, have, other, otherSets) => { const seen = new Set(); return list.filter(c=>{ const k = c.k || dupKey(c);
+    if(seen.has(k) || (have.get(k)||0) < 2 || other.has(k) || !otherSets.has(collectKey(c))) return false; seen.add(k); return true; }).map(c=>({c, k: c.k || dupKey(c), spare:(have.get(c.k || dupKey(c))||0)-1})); };
   const bySet = (a,b) => sorters.set(a.c,b.c);
-  return { give: one(myCards, mine, his).sort(bySet), get: one(f.cards, his, mine).sort(bySet) };
+  return { give: one(myCards, mine, his, collects(f.cards)).sort(bySet), get: one(f.cards, his, mine, collects(myCards)).sort(bySet) };
 }
 function renderTrades(){
   const name = $("#tFriend").value, {give, get} = tradeLists(name);
