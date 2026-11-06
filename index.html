@@ -3524,7 +3524,7 @@ async function syncShared(){
     const got = new Map();
     for(const c of myCards){
       if(got.size>=15) break;
-      if(c.image || c.photo || c.status==="pending") continue;
+      if(c.image || c.photo || c.status==="pending" || c.noTcdbPhoto || c.noSalePic) continue;   // "Wrong photo": never take one back
       const k = photoKey(c); if(!sharedPhotos.has(k)) continue;
       const r = await post("/api/use-shared-photo", {key:k, file:photoFile(c)});
       if(r.ok && r.file) got.set(c.id, r.file);
@@ -3995,9 +3995,10 @@ $("#cdActs").onclick = async e=>{
   else if(e.target.id==="cdBadPic"){
     if(!e.target.dataset.arm){ e.target.dataset.arm = "1"; e.target.textContent = "Tap again to remove the photo"; setTimeout(()=>{ if(e.target.isConnected){ delete e.target.dataset.arm; e.target.textContent = "Wrong photo"; } }, 4000); return; }
     // every copy of this card loses the photo; TCDB's photo is not downloaded for it again
-    const k = dupKey(c), bad = c.image || "";
+    const k = dupKey(c), bad = c.image || "", pk = photoKey(c);
+    fetch("/api/unshare", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({keys:[pk]})}).catch(()=>{}); sharedPhotos.delete(pk);
     try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && (x.image===bad || (!bad && x.photo===c.photo)) ? {...x, image:"", photo:"", imageSource:"", tcdbFile:"", tcdbPath:"", replacePhoto:false, noTcdbPhoto:true, noSalePic:true} : x));
-      toast("Photo removed. Add the right one with Edit."); openCardPage(myCards.find(x=>x.id===c.id)); renderPhotoBar && renderPhotoBar(); }
+      queueSnapshot(); toast("Photo removed. Add the right one with Edit."); openCardPage(myCards.find(x=>x.id===c.id)); renderPhotoBar && renderPhotoBar(); }
     catch(err){ toast("Couldn't save: " + err.message); }
   }
 };
