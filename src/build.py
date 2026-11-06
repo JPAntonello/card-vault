@@ -35,8 +35,7 @@ rep("const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JS
     "const pl={site,kind,at:new Date().toISOString(),results:out};const dl=()=>{if(O){O.postMessage({cv:'prices',data:pl},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pl)],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a}};"
     "if(J.k){fetch('" + SB_URL + "/rest/v1/rpc/inbox_put',{method:'POST',headers:{'apikey':'" + SB_KEY + "','Content-Type':'application/json'},body:JSON.stringify({k:J.k,d:pl})}).then(r=>{if(!r.ok)throw 0}).catch(dl)}else dl();")
 
-rep('const url = (site==="scp" ? "https://www.sportscardspro.com/" : "https://130point.com/") + "#cvfind=" + encodeURIComponent(JSON.stringify({kind, items}));',
-    'const url = (site==="scp" ? "https://www.sportscardspro.com/" : "https://130point.com/") + "#cvfind=" + encodeURIComponent(JSON.stringify({kind, items, k: window.cvInboxKey || ""}));')
+rep('"#cvfind=" + encodeURIComponent(JSON.stringify({kind, items}));', '"#cvfind=" + encodeURIComponent(JSON.stringify({kind, items, k: window.cvInboxKey || ""}));')
 
 # the app runs only after login: its script waits as text, the shim starts it
 i = h.index("<script>\nconst $ = s => document.querySelector(s);")
