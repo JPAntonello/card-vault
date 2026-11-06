@@ -465,6 +465,13 @@ async function start(session){
   uid = session.user.id; email = session.user.email || "";
   try{ prof = chk(await sb.from("profiles").select("id,name").eq("id", uid).maybeSingle()); }catch(e){ started = false; uid = ""; return showLogin("Couldn't open your account: " + e.message); }
   if(!prof || !prof.name) prof = await askName();
+  // the key the bookmarks use to drop 130point results straight into my inbox (works even when this tab can't be reached)
+  try{
+    const r = await sb.from("profiles").select("inbox_key").eq("id", uid).maybeSingle();
+    let k = r.data && r.data.inbox_key;
+    if(!r.error && !k){ k = [...crypto.getRandomValues(new Uint8Array(24))].map(b=>b.toString(16).padStart(2,"0")).join(""); const u = await sb.from("profiles").update({inbox_key:k}).eq("id", uid); if(u.error) k = ""; }
+    window.cvInboxKey = k || "";
+  }catch{ window.cvInboxKey = ""; }
   $$("#cvGate").hidden = true;
   try{ await loadImages(); const s = await getDoc("snapshot", null); shareMap = (s && s.photos) || {}; Object.assign(shareIndex, shareMap); }catch(e){ console.warn(e); }
   const main = document.getElementById("cvMain"), sc = document.createElement("script");

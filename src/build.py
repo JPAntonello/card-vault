@@ -3,6 +3,7 @@
 usage: build.py <app index.html> <shim.js> <out index.html> [supabase script url]"""
 import sys, re
 src, shim_f, out = sys.argv[1:4]
+SB_URL = "https://xqtzocgsmcnhlqenjefa.supabase.co"; SB_KEY = "sb_publishable_03txPDqVwKymwIYch8_QVw_io7z-D0X"
 SB_JS = sys.argv[4] if len(sys.argv) > 4 else "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"
 h = open(src, encoding="utf-8").read()
 shim = open(shim_f, encoding="utf-8").read()
@@ -31,7 +32,11 @@ HELLO = ("let O=null;try{const op=window.opener;if(op){await new Promise(r=>{con
 rep("let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}",
     "let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}" + HELLO)
 rep("const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({site,kind,at:new Date().toISOString(),results:out})],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a;",
-    "const pl={site,kind,at:new Date().toISOString(),results:out};if(O){O.postMessage({cv:'prices',data:pl},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pl)],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a}")
+    "const pl={site,kind,at:new Date().toISOString(),results:out};const dl=()=>{if(O){O.postMessage({cv:'prices',data:pl},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pl)],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a}};"
+    "if(J.k){fetch('" + SB_URL + "/rest/v1/rpc/inbox_put',{method:'POST',headers:{'apikey':'" + SB_KEY + "','Content-Type':'application/json'},body:JSON.stringify({k:J.k,d:pl})}).then(r=>{if(!r.ok)throw 0}).catch(dl)}else dl();")
+
+rep('const url = (site==="scp" ? "https://www.sportscardspro.com/" : "https://130point.com/") + "#cvfind=" + encodeURIComponent(JSON.stringify({kind, items}));',
+    'const url = (site==="scp" ? "https://www.sportscardspro.com/" : "https://130point.com/") + "#cvfind=" + encodeURIComponent(JSON.stringify({kind, items, k: window.cvInboxKey || ""}));')
 
 # the app runs only after login: its script waits as text, the shim starts it
 i = h.index("<script>\nconst $ = s => document.querySelector(s);")
