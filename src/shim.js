@@ -125,7 +125,7 @@ async function allSnapshots(){
   return snapCache;
 }
 
-/* ---------- backup: a copy of my lists once a day; the new one replaces the old ---------- */
+/* ---------- backup: a copy of my lists once a day; the 2 newest are kept ---------- */
 let bkInfo = {last:"", error:""};
 async function backupList(){
   const rows = chk(await sb.from("docs").select("name,updated_at").eq("user_id", uid).like("name", "bk-%"));
@@ -140,7 +140,7 @@ async function ensureBackup(force){
     if(!body.cards || !body.cards.length) return;      // nothing to keep yet
     body.size = JSON.stringify(body).length;
     await putDoc(name, body);
-    const old = (await backupList()).filter(r => r.name !== name).map(r=>r.name);   // the new copy replaces the old one
+    const old = (await backupList()).slice(2).map(r=>r.name);   // today's copy and the one before it are kept
     if(old.length) chk(await sb.from("docs").delete().eq("user_id", uid).in("name", old));
     bkInfo = {last: fmtAt(new Date().toISOString()), error:""};
   }catch(e){ bkInfo.error = e.message; }
@@ -217,7 +217,7 @@ async function api(url, method, rawBody){
     const rows = chk(await sb.from("inbox").select("id,data").order("id"));
     return J(rows.map(r => ({name: String(r.id), data: r.data})));
   }
-  if(p === "/api/backup"){ if(method === "POST") await ensureBackup(true); return J({enabled:true, dir:"online, the latest copy", last: bkInfo.last, error: bkInfo.error}); }
+  if(p === "/api/backup"){ if(method === "POST") await ensureBackup(true); return J({enabled:true, dir:"online, the 2 latest copies", last: bkInfo.last, error: bkInfo.error}); }
   if(p === "/api/backups"){
     const rows = await backupList(), list = [];
     for(const r of rows){ const d = r.name.slice(3); list.push({name: "card-vault-" + d + ".zip", at: fmtAt(r.updated_at), size: 0}); }
