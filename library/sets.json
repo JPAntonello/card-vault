@@ -977,5 +977,27 @@
     "count": 259,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/297862/2021-22-Stadium-Club-Chrome-UEFA-Champions-League",
     "note": "TCDB: 2021 22 Stadium Club Chrome UEFA Champions League · 9 subsets · 48 parallels"
+  },
+  {
+    "id": "mvprizmwc2022",
+    "year": "2022",
+    "name": "Panini Prizm FIFA World Cup",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T20:38:32.000Z",
+    "count": 798,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/327724/2022-Panini-Prizm-FIFA-World-Cup",
+    "note": "TCDB: 2022 Panini Prizm FIFA World Cup · 14 subsets · 99 parallels"
+  },
+  {
+    "id": "mvdonwwc2023",
+    "year": "2023",
+    "name": "Panini Donruss FIFA Women's World Cup",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T20:38:40.000Z",
+    "count": 422,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/379621/2023-Donruss-FIFA-Womens-World-Cup",
+    "note": "TCDB: 2023 Donruss FIFA Womens World Cup · 10 subsets · 41 parallels"
   }
 ]
