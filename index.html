@@ -634,7 +634,11 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
     </label>
     <label class="check" data-show="full"><input type="checkbox" id="f_rookie" name="rookie"> Rookie card</label>
 
-    <label class="full" id="moveWrap" data-show="full">Set (checklist)<select id="f_moveSet"></select><small class="hint" id="moveHint"></small></label>
+    <div class="full" id="moveWrap" data-show="full">
+      <label>Which card is it? (search the checklists)<input type="search" id="f_mvFind" placeholder="e.g. Messi 1 · Haraldsson A-HH finest"></label>
+      <small class="hint" id="moveHint"></small>
+      <div class="finds" id="mvFindList" aria-live="polite"></div>
+    </div>
     <label class="full" id="editVerWrap" hidden>Version (base or parallel)
       <select id="f_editver"></select>
     </label>
@@ -1303,7 +1307,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793983423";
+const BUILD = "1793984007";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2026,8 +2030,8 @@ function openDrawer(card){
     renderValueInfo(card);
     f.elements.rookie.checked=!!card.rookie; f.elements.auto.checked=!!card.auto;
     setMode("full");
-    $("#f_moveSet").innerHTML = `<option value="">— not linked to a checklist —</option>` + readySets().map(x=>`<option value="${esc(x.id)}"${x.id===card.setId?" selected":""}>${esc(x.year)} ${esc(x.name)}</option>`).join("");
-    $("#moveHint").textContent = ""; moveState = null;
+    $("#f_mvFind").value = ""; $("#mvFindList").innerHTML = ""; moveState = null;
+    $("#moveHint").textContent = card.setId ? `Now: ${[card.year, card.set].filter(Boolean).join(" ")} #${card.number}. Wrong card? Search the right one here.` : "Not linked to a checklist yet: search the right card here.";
   } else {
     f.elements.from.value = "";   // always empty for a new card
     setMode("find");
@@ -2068,8 +2072,8 @@ function shrinkPhoto(file){
 /* ---------- find a card in every loaded set ---------- */
 let findHits = [], fromFind = false;
 async function loadAllCatalogs(){ await Promise.all(readySets().map(s=>loadCatalog(s.id).catch(()=>null))); }
-function findResults(){
-  const raw = $("#f_find").value.trim();
+function findResults(q){
+  const raw = (q ?? $("#f_find").value).trim();
   const toks = raw.split(/[\s,;#]+/).filter(Boolean);
   if(!toks.length) return [];
   const out = [];
@@ -2429,24 +2433,27 @@ let findT; $("#f_find").addEventListener("input",()=>{ clearTimeout(findT); find
 $("#findList").addEventListener("click",e=>{ const b = e.target.closest(".fres"); if(b && findHits[+b.dataset.i]) pickFound(findHits[+b.dataset.i]); });
 $("#f_bulkver").addEventListener("change",renderBulk);
 $("#f_version").addEventListener("change",e=>{ verWant = e.target.value; updateMatch(); });
-// moving a card to another set or number (it was entered in the wrong set)
-let moveState = null, moveT = 0;
-async function checkMove(){
-  if(mode!=="full" || !editing) return;
-  const id = $("#f_moveSet").value, num = $("#f_number").value.trim().replace(/^#/,"");
-  if(!id || (id===editing.setId && normNum(num)===normNum(editing.number))){ moveState = null; $("#moveHint").textContent = ""; if(editing.setId && catalogs[editing.setId]) fillEditVersions(catalogs[editing.setId], editing); return; }
-  const set = sets.find(x=>x.id===id); if(!set) return;
-  const cat = catalogs[id] || await loadCatalog(id).catch(()=>null); if(!cat){ $("#moveHint").textContent = "Couldn't open that checklist."; return; }
-  const cand = cat.byNum.get(normNum(num)) || [];
-  const last = nrm($("#f_player").value).split(" ").pop();
-  const entry = cand.find(e=>nrm(e.player).includes(last)) || cand[0];
-  if(!entry){ moveState = null; $("#moveHint").textContent = `#${num} isn't in that checklist. Check the number.`; $("#editVerWrap").hidden = true; return; }
-  moveState = {set, cat, entry};
-  $("#moveHint").textContent = `→ #${entry.n} ${entry.player}${entry.sub && entry.sub!=="Base" ? " · " + entry.sub : ""}. Saving moves the card here; its price and photo start again.`;
-  fillEditVersions(cat, {setId:id, number:entry.n, player:entry.player, parallelSid:""});
+// the card was entered in the wrong set or number: find the right one in the checklists, like when adding
+let moveState = null, moveT = 0, mvHits = [];
+async function renderMoveFind(){
+  const box = $("#mvFindList"), q = $("#f_mvFind").value.trim();
+  if(!q){ box.innerHTML = ""; mvHits = []; return; }
+  if(readySets().some(x=>!catalogs[x.id])){ box.innerHTML = `<p class="sum">Loading checklists…</p>`; await loadAllCatalogs(); if($("#f_mvFind").value.trim()!==q) return; }
+  mvHits = findResults(q);
+  box.innerHTML = mvHits.length
+    ? `<p class="sum">${mvHits.length===40 ? "Top 40 matches: add more words to narrow down" : mvHits.length + " match" + (mvHits.length===1?"":"es")} · tap the right card</p>` + mvHits.map((r,i)=>{ const e = r.e, au = (e.tags||[]).includes("AU");
+        return `<button type="button" class="fres" data-mv="${i}"><span class="n">#${esc(e.n)}</span><span class="pl"><b>${esc(e.player)}</b>${e.rc?' <span class="pill hot">RC</span>':""}${au?' <span class="pill hot">Auto</span>':""}<br><small>${esc(r.set.year)} ${esc(r.set.name)}${e.sub && e.sub!=="Base" ? " · " + esc(e.sub) : ""}${r.par ? " · " + esc(parLabel(r.par.p)) : ""}</small></span></button>`; }).join("")
+    : `<p class="sum">No card matches in the loaded sets. Try fewer words, or request the set under Sets.</p>`;
 }
-$("#f_moveSet").addEventListener("change", checkMove);
-$("#f_number").addEventListener("input", ()=>{ clearTimeout(moveT); moveT = setTimeout(checkMove, 400); });
+$("#f_mvFind").addEventListener("input", ()=>{ clearTimeout(moveT); moveT = setTimeout(renderMoveFind, 250); });
+$("#mvFindList").addEventListener("click", e=>{
+  const b = e.target.closest("[data-mv]"); if(!b) return; const r = mvHits[+b.dataset.mv]; if(!r) return;
+  moveState = {set: r.set, cat: catalogs[r.set.id], entry: r.e};
+  $("#mvFindList").innerHTML = "";
+  $("#moveHint").textContent = `→ ${r.set.year} ${r.set.name} #${r.e.n} ${r.e.player}${r.e.sub && r.e.sub!=="Base" ? " · " + r.e.sub : ""}. Pick the version below and Save: the card moves here (price and photo start again).`;
+  fillEditVersions(moveState.cat, {setId:r.set.id, number:r.e.n, player:r.e.player, parallelSid: r.par ? String(r.par.p.sid) : ""});
+  if(r.par) $("#f_editver").value = String(r.par.p.sid);
+});
 $("#f_editver").addEventListener("change",e=>{
   const cat = editing && catalogs[editing.setId]; if(!cat) return;
   const lab = sid => { const p = sid ? cat.parBySid.get(sid) : null; return p ? parLabel(p) : ""; };
