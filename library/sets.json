@@ -955,5 +955,16 @@
     "count": 713,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/629868/2026-Merlin-Premier-League",
     "note": "TCDB: 2026 Merlin Premier League · 20 subsets · 99 parallels"
+  },
+  {
+    "id": "mvprizmpl2021",
+    "year": "2020/21",
+    "name": "Panini Prizm Premier League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T20:16:33.000Z",
+    "count": 620,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/256860/2020-21-Panini-Prizm-Premier-League",
+    "note": "TCDB: 2020 21 Panini Prizm Premier League · 15 subsets · 145 parallels"
   }
 ]
