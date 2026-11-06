@@ -1376,7 +1376,9 @@ async function commit(name, change){
   if(name==="cards"){
     const old = new Map(base.map(c=>[c.id, c])), d = new Date().toISOString().slice(0,10);
     next = next.map(c=>{ const o = old.get(c.id), v = Number(c.value)||0;
-      if(v>0 && (!o || Number(o.value)!==v)) return {...c, valueHist: [...(c.valueHist||[]).filter(x=>x.d!==d), {d, v}].slice(-20)};
+      if(v>0 && (!o || Number(o.value)!==v)) c = {...c, valueHist: [...(c.valueHist||[]).filter(x=>x.d!==d), {d, v}].slice(-20)};
+      // a photo you marked "Wrong photo" on this card is never put back, whatever brings it (TCDB, SportsCardsPro, a sale, the shared photos)
+      if(c.image && (c.badPics||[]).includes(c.image)) c = {...c, image:"", imageSource:""};
       return c; });
   }
   // a box is open: every card added now belongs to it
@@ -3997,7 +3999,7 @@ $("#cdActs").onclick = async e=>{
     // every copy of this card loses the photo; TCDB's photo is not downloaded for it again
     const k = dupKey(c), bad = c.image || "", pk = photoKey(c);
     fetch("/api/unshare", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({keys:[pk]})}).catch(()=>{}); sharedPhotos.delete(pk);
-    try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && (x.image===bad || (!bad && x.photo===c.photo)) ? {...x, image:"", photo:"", imageSource:"", tcdbFile:"", tcdbPath:"", replacePhoto:false, noTcdbPhoto:true, noSalePic:true} : x));
+    try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && (x.image===bad || (!bad && x.photo===c.photo)) ? {...x, image:"", photo:"", imageSource:"", tcdbFile:"", tcdbPath:"", replacePhoto:false, noTcdbPhoto:true, noSalePic:true, badPics:[...new Set([...(x.badPics||[]), bad].filter(Boolean))].slice(-10)} : x));
       queueSnapshot(); toast("Photo removed. Add the right one with Edit."); openCardPage(myCards.find(x=>x.id===c.id)); renderPhotoBar && renderPhotoBar(); }
     catch(err){ toast("Couldn't save: " + err.message); }
   }
