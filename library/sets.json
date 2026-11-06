@@ -922,5 +922,16 @@
     "count": 562,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/596266/2025-26-Topps-Chrome-Bundesliga",
     "note": "TCDB: 2025 26 Topps Chrome Bundesliga · 21 subsets · 134 parallels"
+  },
+  {
+    "id": "mveliteepl2122",
+    "year": "2021/22",
+    "name": "Panini Donruss Elite Premier League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T19:29:25.000Z",
+    "count": 376,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/346751/2021-22-Donruss-Elite-Premier-League",
+    "note": "TCDB: 2021 22 Donruss Elite Premier League · 9 subsets · 41 parallels"
   }
 ]
