@@ -2856,14 +2856,36 @@ async function usdRates(){
 const SALE_DAYS = 60, SALE_N = 3;
 // an ended eBay listing opens on a "similar item" (often a graded copy) unless the link says nordt=true
 const ebayLink = u => { const s = String(u||""); return /\bebay\.[a-z.]+\/itm\/\d+/i.test(s) ? s.replace(/[?#].*$/,"") + "?nordt=true" : s; };
+// same player, same card number, same year (or none), not graded/autographed/numbered unless the card is
+function nearSale(title, c){
+  const raw = " " + String(title||"").toLowerCase() + " ", t = " " + nrm(title) + " ";
+  const last = nrm(c.player).split(" ").filter(w=>w.length>=3).pop();
+  const num = String(c.number||"").toLowerCase().replace(/^#/,"").trim();
+  if(!num || !last || !t.includes(" "+last+" ")) return false;
+  // the card number, with or without "#", leading zeros or the dash ("CA-DY", "CADY")
+  const pat = num.replace(/^0+(?=\d)/,"").split(/[^a-z0-9]+/).filter(Boolean).map(p=>p.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("[\\s-]?");
+  if(!pat || !new RegExp("(^|[^a-z0-9])#?0*" + pat + "([^a-z0-9]|$)").test(raw)) return false;
+  const y = (String(c.year||"").match(/\d{4}/)||[])[0], ys = raw.match(/\b(19|20)\d{2}\b/g);
+  if(y && ys && !ys.includes(y)) return false;
+  if(/\b(psa|bgs|sgc|cgc|graded|slab)\b/.test(t)) return false;
+  if(!c.auto && /\b(auto|autograph|autographed|signed)\b/.test(t)) return false;
+  if(!c.serial && /\b\d{1,4}\s*\/\s*\d{1,4}\b/.test(raw)) return false;
+  return true;
+}
 function priceFromSales(c, sales, rates){
   // the price is always the latest sale of exactly this version of the card (base, parallel or numbered)
-  const all = [];
+  const all = [], near = [];
   for(const [title, price, curr, date, url, img] of sales||[]){
     const r = curr==="USD" || !curr ? 1 : Number(rates[curr]);
-    if(!(price>0) || !(r>0) || !date || (c.badSales||[]).some(b=>sameUrl(b, url)) || cardMatch(title, c, false) < 0) continue;
-    all.push({usd: price/r, date: String(date).slice(0,10), url: ebayLink(url), title, img: img||"", info: cardMatch.info||{}});
+    if(!(price>0) || !(r>0) || !date || (c.badSales||[]).some(b=>sameUrl(b, url))) continue;
+    const row = {usd: price/r, date: String(date).slice(0,10), url: ebayLink(url), title, img: img||""};
+    if(cardMatch(title, c, false) < 0){ if(nearSale(title, c)) near.push({...row, info:{}}); continue; }
+    all.push({...row, info: cardMatch.info||{}});
   }
+  // nothing exactly this version, but a sale that is almost it (same player, number and year, another version word):
+  // it waits in "To check" for you to decide
+  const nearOnly = !all.length && near.length > 0;
+  if(nearOnly) all.push(...near);
   if(!all.length) return null;
   all.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   // a sale far from this card's other recent sales is usually a slab or a lot with a plain title
@@ -2879,6 +2901,7 @@ function priceFromSales(c, sales, rates){
   const v = Math.round(x.usd*100)/100;
   // reasons to let you check the match first
   const why = [];
+  if(nearOnly) why.push("close match only: the title names a different version or product. Check it is your card");
   if(x.info.noNum) why.push("the title has no card number");
   if((x.info.unknown||[]).length>=2) why.push("words the app doesn't know: " + x.info.unknown.join(", "));
   const cands = all.filter(o=>o!==x).slice(0,4).map(o=>({date:o.date, value:Math.round(o.usd*100)/100, url:o.url, title:String(o.title||"").slice(0,150), img:o.img}));
@@ -3932,6 +3955,7 @@ $("#rvList").onclick = async e=>{
     toast(`${nameOf(c)}: price set to ${money(r.value)}`);
   } else if(e.target.closest("[data-no]")){
     const words = [...(rvPick[id] || [])];
+    if(r.url) await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, badSales:[...new Set([...(x.badSales||[]), r.url])].slice(-30)}));
     if(words.length && c.setId) await commit("sets", list=>list.map(s=>s.id!==c.setId ? s : {...s, blockWords:[...new Set([...(s.blockWords||[]), ...words])]}));
     // the next latest sale that still looks like this card waits for you too; none left: no price
     const next = (r.cands||[]).find(o=>cardMatch(o.title, c, false) >= 0);
