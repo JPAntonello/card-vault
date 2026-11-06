@@ -1292,7 +1292,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793980579";
+const BUILD = "1793980745";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2722,7 +2722,7 @@ function renderPhotoBar(){
   $("#salePhotos").hidden = !sp; $("#salePhotos").textContent = `Sale photos (${Math.min(sp, RUN_MAX)})`;
   $("#photoBar").hidden = !n && !s && !sp; $("#findPhotos").hidden = !s; $("#findPhotos").textContent = `SportsCardsPro (${Math.min(s, RUN_MAX)})`;
   $("#getPhotos").hidden = !n;
-  const rp = pendingPhotos().filter(c=>c.replacePhoto).length;
+  const rp = pendingPhotos().filter(c=>c.replacePhoto && c.imageSource!=="Sale").length;
   $("#photoCount").textContent = (n ? `${n} TCDB photo${n===1?"":"s"} to download` + (rp ? ` (${rp} replace an eBay photo)` : "") : "") + (s ? `${n?" · ":""}${s} not on TCDB: look on SportsCardsPro` : "") + (sp ? `${sp} without a photo on TCDB or SportsCardsPro: use their last sale's photo` : "") || `${m} without a photo`;
   const tried = noPhoto().filter(c=>c.photoTried).length, w = lsList("cv-findPhoto").length;
   const ids = new Set(noPhoto().map(c=>c.id)), w130 = lsList("cv-130photo").filter(id=>ids.has(id)).length;
@@ -2739,7 +2739,7 @@ async function applySalePics(results){
   const pics = new Map();
   for(const [id, rows] of Object.entries(results)){ const u = salePic(rows && rows[0] && rows[0][2]); if(u) pics.set(id, u); }
   const ids = new Set(Object.keys(results));
-  try{ await commit("cards", all=>all.map(c=> !ids.has(c.id) ? c : pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id), imageSource:"Sale", salePicTried: isoDay()} : {...c, salePicTried: isoDay()})); }catch(err){ return toast("Couldn't save: " + err.message); }
+  try{ await commit("cards", all=>all.map(c=> !ids.has(c.id) ? c : pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id), imageSource:"Sale", replacePhoto: !!c.tcdbFile, salePicTried: isoDay()} : {...c, salePicTried: isoDay()})); }catch(err){ return toast("Couldn't save: " + err.message); }
   toast(`${pics.size} sale photo${pics.size===1?"":"s"} added` + (ids.size - pics.size ? ` · ${ids.size - pics.size} had none` : "")); renderPhotoBar();
 }
 async function getSalePhotos(){
@@ -2747,7 +2747,7 @@ async function getSalePhotos(){
   // a saved sale that already has its photo: used right away; the others search 130point (price + photo)
   const now = list.filter(c=>c.valueSales && c.valueSales[0] && c.valueSales[0][4]);
   if(now.length){ const ids = new Map(now.map(c=>[c.id, c.valueSales[0][4]]));
-    try{ await commit("cards", all=>all.map(c=> ids.has(c.id) && !c.image && !c.photo ? {...c, image: ids.get(c.id), imageSource:"Sale"} : c)); }catch(err){ return toast("Couldn't save: " + err.message); }
+    try{ await commit("cards", all=>all.map(c=> ids.has(c.id) && !c.image && !c.photo ? {...c, image: ids.get(c.id), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : c)); }catch(err){ return toast("Couldn't save: " + err.message); }
     toast(`${now.length} sale photo${now.length===1?"":"s"} added`); renderPhotoBar(); }
   // a saved sale: its eBay page gives the photo (no new 130point search); no saved sale: 130point (price + photo)
   const left = list.filter(c=>!now.includes(c)), onEbay = left.filter(c=>/ebay\./.test(c.valueUrl||"") && !(c.salePicTried && Date.now()-Date.parse(c.salePicTried) < 7*DAY));
@@ -3115,7 +3115,7 @@ async function applyPriceResults(site, results){
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
   await commit("cards", all=>all.map(withPic).map(c=> upd.has(c.id)
     ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null,
-       ...(site==="130point" && !c.image && !c.photo && (!c.tcdbFile || tcdbNoneNow(c)) && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale"} : {})}
+       ...(site==="130point" && !c.image && !c.photo && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : {})}
     : review.has(c.id) ? {...c, priceTried: day, priceAlt:0, review: reviewOf(review.get(c.id))}
     // not found: the next search uses other words; only when that also finds nothing is the card left for a week
     : site==="130point" && miss.has(c.id) && c.priceAlt!==1 ? {...c, priceAlt:1, priceTried:""}
@@ -3988,13 +3988,11 @@ $("#rvList").onclick = async e=>{
   if(w){ const s = rvPick[id] || (rvPick[id] = new Set()); s.has(w.dataset.w) ? s.delete(w.dataset.w) : s.add(w.dataset.w); w.setAttribute("aria-pressed", s.has(w.dataset.w)); return; }
   const r = c.review, day = isoDay();
   if(e.target.closest("[data-ok]")){
-    let pic = null;
-    if(false && !c.image && !c.photo && r.img){ try{ const res = await fetch("/api/save-photo", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({file: photoFile(c), url: r.img})}); const j = res.ok ? await res.json() : null; if(j && j.ok) pic = j; }catch{} }
+    const pic = !c.image && !c.photo && !c.noSalePic && salePic(r.img) ? {file: salePic(r.img), source:"Sale"} : null;
     await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, value:r.value, valueDate:day, valueSource:"eBay sold", valueNote:r.note || `Ungraded · last sale, ${String(r.date).split("-").reverse().join("/")} (130point) · checked by you`,
-      valueUrl:r.url||"", valueSales:[[r.date, r.value, r.url||"", r.title||""]], review:null, priceTried:"",
-      ...(pic ? {image:pic.file, imageSource:pic.source||"eBay", photoTried:""} : {})}));
-    if(pic) loadDrive().then(render);
-    toast(`${nameOf(c)}: price set to ${money(r.value)}`);
+      valueUrl:r.url||"", valueSales:[[r.date, r.value, r.url||"", r.title||"", salePic(r.img)]], review:null, priceTried:"",
+      ...(pic ? {image:pic.file, imageSource:pic.source||"eBay", replacePhoto: !!x.tcdbFile} : {})}));
+    toast(`${nameOf(c)}: price set to ${money(r.value)}` + (pic ? " · sale photo added" : ""));
   } else if(e.target.closest("[data-no]")){
     const words = [...(rvPick[id] || [])];
     if(r.url) await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, badSales:[...new Set([...(x.badSales||[]), r.url])].slice(-30)}));
