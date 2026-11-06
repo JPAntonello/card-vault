@@ -634,6 +634,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
     </label>
     <label class="check" data-show="full"><input type="checkbox" id="f_rookie" name="rookie"> Rookie card</label>
 
+    <label class="full" id="moveWrap" data-show="full">Set (checklist)<select id="f_moveSet"></select><small class="hint" id="moveHint"></small></label>
     <label class="full" id="editVerWrap" hidden>Version (base or parallel)
       <select id="f_editver"></select>
     </label>
@@ -1302,7 +1303,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793982296";
+const BUILD = "1793983423";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2025,6 +2026,8 @@ function openDrawer(card){
     renderValueInfo(card);
     f.elements.rookie.checked=!!card.rookie; f.elements.auto.checked=!!card.auto;
     setMode("full");
+    $("#f_moveSet").innerHTML = `<option value="">— not linked to a checklist —</option>` + readySets().map(x=>`<option value="${esc(x.id)}"${x.id===card.setId?" selected":""}>${esc(x.year)} ${esc(x.name)}</option>`).join("");
+    $("#moveHint").textContent = ""; moveState = null;
   } else {
     f.elements.from.value = "";   // always empty for a new card
     setMode("find");
@@ -2265,7 +2268,16 @@ async function save(e){
     if(mode==="quick" && !data.desc) return fail("Describe the card first, e.g. year, brand and card number.");
     if(mode==="full" && !data.player) return fail("Add the player's name.");
     if(mode==="quick" && editing && editing.status!=="pending"){ data = {...editing, ...common, desc:data.desc}; }
-    if(mode==="full" && editing && !$("#editVerWrap").hidden){
+    if(mode==="full" && editing && moveState){
+      const {set, cat, entry} = moveState, sid = $("#editVerWrap").hidden ? "" : $("#f_editver").value, p = sid ? cat.parBySid.get(sid) : null;
+      const cid = p ? parCid(p, entry.n, entry.player) : null, par = p && cid ? {p, cid} : null;
+      // the old version text came from the old checklist: only a note you typed now is kept
+      const note = v("variant") !== String(editing.variant||"") ? v("variant") : "";
+      data = {...setCardData(set, entry, {...common, variant: note}, par),
+        value:"", valueDate:"", valueSource:"", valueNote:"", valueSales:[], valueUrl:"", valueHist:[], priceTried:"", priceAlt:0, review:null, badSales:[],
+        tcdbNone:"", photoTried:"", salePicTried:"", noTcdbPhoto:false, noSalePic:false, badPics:[], replacePhoto:false, imageSource:""};
+      data.moveRef = refFor(set, entry, par);
+    } else if(mode==="full" && editing && !$("#editVerWrap").hidden){
       const cat = catalogs[editing.setId], sid = $("#f_editver").value, p = sid ? cat.parBySid.get(sid) : null;
       const cid = p ? parCid(p, data.number, data.player) : null;
       Object.assign(data, {parallel: p ? p.name : "", parallelSid: p ? p.sid : "", serial: p ? (p.serial||"") : ""});
@@ -2297,6 +2309,11 @@ async function save(e){
         if((driveFiles||[]).some(f=>f.p===file)) data.image = file;          // already downloaded before
         else { data.tcdbFile = file; data.tcdbPath = tcdbPath(ref); }        // fetched later by "Get photos from TCDB"
       } else if(editing?.tcdbFile){ data.tcdbFile = editing.tcdbFile; data.tcdbPath = editing.tcdbPath || ""; }   // keep the pending TCDB photo
+    }
+    if(data.moveRef !== undefined){   // moved: the old automatic photo goes, the new card's TCDB photo is fetched later
+      const ref = data.moveRef; delete data.moveRef;
+      if(!$("#f_photo").files[0] && (!editing.image || /^(TCDB|SCP|Sale|eBay|SportsCardsPro)?$/.test(editing.imageSource||"")) && (chosenImage===TCDB || chosenImage===editing.image)){ data.image = ""; data.photo = editing.photo || ""; }
+      if(!data.image && !data.photo && ref){ data.tcdbFile = safeName(ref.name) + ".jpg"; data.tcdbPath = tcdbPath(ref); }
     }
     const file=$("#f_photo").files[0];
     if(file){
@@ -2412,6 +2429,24 @@ let findT; $("#f_find").addEventListener("input",()=>{ clearTimeout(findT); find
 $("#findList").addEventListener("click",e=>{ const b = e.target.closest(".fres"); if(b && findHits[+b.dataset.i]) pickFound(findHits[+b.dataset.i]); });
 $("#f_bulkver").addEventListener("change",renderBulk);
 $("#f_version").addEventListener("change",e=>{ verWant = e.target.value; updateMatch(); });
+// moving a card to another set or number (it was entered in the wrong set)
+let moveState = null, moveT = 0;
+async function checkMove(){
+  if(mode!=="full" || !editing) return;
+  const id = $("#f_moveSet").value, num = $("#f_number").value.trim().replace(/^#/,"");
+  if(!id || (id===editing.setId && normNum(num)===normNum(editing.number))){ moveState = null; $("#moveHint").textContent = ""; if(editing.setId && catalogs[editing.setId]) fillEditVersions(catalogs[editing.setId], editing); return; }
+  const set = sets.find(x=>x.id===id); if(!set) return;
+  const cat = catalogs[id] || await loadCatalog(id).catch(()=>null); if(!cat){ $("#moveHint").textContent = "Couldn't open that checklist."; return; }
+  const cand = cat.byNum.get(normNum(num)) || [];
+  const last = nrm($("#f_player").value).split(" ").pop();
+  const entry = cand.find(e=>nrm(e.player).includes(last)) || cand[0];
+  if(!entry){ moveState = null; $("#moveHint").textContent = `#${num} isn't in that checklist. Check the number.`; $("#editVerWrap").hidden = true; return; }
+  moveState = {set, cat, entry};
+  $("#moveHint").textContent = `→ #${entry.n} ${entry.player}${entry.sub && entry.sub!=="Base" ? " · " + entry.sub : ""}. Saving moves the card here; its price and photo start again.`;
+  fillEditVersions(cat, {setId:id, number:entry.n, player:entry.player, parallelSid:""});
+}
+$("#f_moveSet").addEventListener("change", checkMove);
+$("#f_number").addEventListener("input", ()=>{ clearTimeout(moveT); moveT = setTimeout(checkMove, 400); });
 $("#f_editver").addEventListener("change",e=>{
   const cat = editing && catalogs[editing.setId]; if(!cat) return;
   const lab = sid => { const p = sid ? cat.parBySid.get(sid) : null; return p ? parLabel(p) : ""; };
