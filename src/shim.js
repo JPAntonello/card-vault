@@ -31,6 +31,14 @@ const chk = r => { if(r.error) throw new Error(r.error.message || String(r.error
 const isoDay = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
 async function bodyText(b){ if(b == null) return ""; if(typeof b === "string") return b; if(b instanceof Blob) return await b.text(); return String(b); }
 
+/* ---------- this browser's copy (IndexedDB): opening only downloads what changed ---------- */
+const idb = (() => { let p = null; const open = () => p || (p = new Promise((res) => { try{ const r = indexedDB.open("cardvault", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }catch{ res(null); } }));
+  const tx = async (mode, fn) => { const db = await open(); if(!db) return null; return new Promise(res => { try{ const t = db.transaction("kv", mode), q = fn(t.objectStore("kv")); t.oncomplete = () => res(q && q.result); t.onerror = () => res(null); }catch{ res(null); } }); };
+  return { get: k => tx("readonly", s => s.get(k)), set: (k, v) => tx("readwrite", s => s.put(v, k)) }; })();
+let saveT = 0;
+const keepLocal = () => { clearTimeout(saveT); saveT = setTimeout(() => { if(uid) idb.set("cache:" + uid, {docCache, snapCache, libCache}).catch(()=>{}); }, 1500); };
+async function loadLocal(){ try{ const v = await idb.get("cache:" + uid); if(v){ Object.assign(docCache, v.docCache || {}); Object.assign(snapCache, v.snapCache || {}); if(v.libCache) libCache = v.libCache; } }catch{} }
+
 /* ---------- documents (cards, sources, wants, history, images, snapshot, backups) ---------- */
 const docCache = {};   // name -> {at, body}
 async function getDoc(name, fallback){
@@ -40,19 +48,20 @@ async function getDoc(name, fallback){
   if(c && c.at === meta.updated_at) return c.body;
   const row = chk(await sb.from("docs").select("body,updated_at").eq("user_id", uid).eq("name", name).maybeSingle());
   if(!row) return fallback;
-  docCache[name] = {at: row.updated_at, body: row.body};
+  docCache[name] = {at: row.updated_at, body: row.body}; if(!/^bk-/.test(name)) keepLocal();
   return row.body;
 }
 async function putDoc(name, body){
   const at = new Date().toISOString();
   chk(await sb.from("docs").upsert({user_id: uid, name, body, updated_at: at}));
-  docCache[name] = {at, body};
+  if(/^bk-|^before-restore$/.test(name)) return;
+  docCache[name] = {at, body}; keepLocal();
 }
 
 /* ---------- the set library: this site's library/sets.json + changes saved in Supabase ---------- */
 let repoSets = null, libCache = null;
 async function repoSetList(){
-  if(!repoSets){ try{ const r = await origFetch("library/sets.json?v=" + Math.floor(Date.now()/6e5), {cache:"no-store"}); repoSets = r.ok ? await r.json() : []; }catch{ repoSets = []; } }
+  if(!repoSets){ try{ const r = await origFetch("library/sets.json?v=" + BUILD); repoSets = r.ok ? await r.json() : []; }catch{ repoSets = []; } }
   return Array.isArray(repoSets) ? repoSets : [];
 }
 async function libRow(){
@@ -60,7 +69,7 @@ async function libRow(){
   if(!meta) return null;
   if(libCache && libCache.at === meta.updated_at) return libCache.body;
   const row = chk(await sb.from("library").select("body,updated_at").eq("id","sets").maybeSingle());
-  libCache = row ? {at: row.updated_at, body: row.body} : null;
+  libCache = row ? {at: row.updated_at, body: row.body} : null; keepLocal();
   return libCache ? libCache.body : null;
 }
 async function getSets(){
@@ -107,6 +116,7 @@ async function allSnapshots(){
   if(need.length){
     const rows = chk(await sb.from("docs").select("user_id,body,updated_at").eq("name","snapshot").in("user_id", need));
     for(const r of rows) snapCache[r.user_id] = {at: r.updated_at, body: r.body};
+    keepLocal();
   }
   const keep = new Set(metas.map(m=>m.user_id)); for(const k in snapCache) if(!keep.has(k)) delete snapCache[k];
   shareIndex = {};
@@ -115,7 +125,7 @@ async function allSnapshots(){
   return snapCache;
 }
 
-/* ---------- backups: a copy of my lists once a day, last 14 kept ---------- */
+/* ---------- backup: a copy of my lists once a day; the new one replaces the old ---------- */
 let bkInfo = {last:"", error:""};
 async function backupList(){
   const rows = chk(await sb.from("docs").select("name,updated_at").eq("user_id", uid).like("name", "bk-%"));
@@ -130,7 +140,7 @@ async function ensureBackup(force){
     if(!body.cards || !body.cards.length) return;      // nothing to keep yet
     body.size = JSON.stringify(body).length;
     await putDoc(name, body);
-    const old = (await backupList()).slice(14).map(r=>r.name);
+    const old = (await backupList()).filter(r => r.name !== name).map(r=>r.name);   // the new copy replaces the old one
     if(old.length) chk(await sb.from("docs").delete().eq("user_id", uid).in("name", old));
     bkInfo = {last: fmtAt(new Date().toISOString()), error:""};
   }catch(e){ bkInfo.error = e.message; }
@@ -152,7 +162,7 @@ async function api(url, method, rawBody){
   }
   if((m = p.match(/^\/api\/catalog\/([A-Za-z0-9_-]{1,64})$/))){
     const id = m[1];
-    if(method === "GET"){ const r = await origFetch("library/catalog/" + id + ".json?v=" + Math.floor(Date.now()/6e5), {cache:"no-store"}); return r.ok ? J(await r.json()) : T("Not found", 404); }
+    if(method === "GET"){ const r = await origFetch("library/catalog/" + id + ".json?v=" + BUILD); return r.ok ? J(await r.json()) : T("Not found", 404); }
     if(method === "DELETE"){
       const snaps = await allSnapshots(), users = [];
       for(const k in snaps){ if(k === uid) continue; const b = snaps[k].body || {}; if((b.cards||[]).some(c => c.setId === id)) users.push(b.name || "a friend"); }
@@ -207,7 +217,7 @@ async function api(url, method, rawBody){
     const rows = chk(await sb.from("inbox").select("id,data").order("id"));
     return J(rows.map(r => ({name: String(r.id), data: r.data})));
   }
-  if(p === "/api/backup"){ if(method === "POST") await ensureBackup(true); return J({enabled:true, dir:"online, last 14 days", last: bkInfo.last, error: bkInfo.error}); }
+  if(p === "/api/backup"){ if(method === "POST") await ensureBackup(true); return J({enabled:true, dir:"online, the latest copy", last: bkInfo.last, error: bkInfo.error}); }
   if(p === "/api/backups"){
     const rows = await backupList(), list = [];
     for(const r of rows){ const d = r.name.slice(3); list.push({name: "card-vault-" + d + ".zip", at: fmtAt(r.updated_at), size: 0}); }
@@ -491,6 +501,7 @@ async function start(session){
     window.cvInboxKey = k || "";
   }catch{ window.cvInboxKey = ""; }
   $$("#cvGate").hidden = true;
+  await loadLocal();
   try{ await loadImages(); const s = await getDoc("snapshot", null); shareMap = (s && s.photos) || {}; Object.assign(shareIndex, shareMap); }catch(e){ console.warn(e); }
   const main = document.getElementById("cvMain"), sc = document.createElement("script");
   sc.textContent = main.textContent; document.body.appendChild(sc);

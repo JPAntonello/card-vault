@@ -795,7 +795,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
 </aside>
 <aside class="drawer" id="bkDrawer" hidden aria-labelledby="bkTitle" role="dialog">
   <h2 id="bkTitle">Backups</h2>
-  <p class="hint">One backup a day, the last 30 kept. Restoring puts that day's cards, places, want list and value history back; what you have now is kept next to it (cards.before-restore-….json), so it can be undone.</p>
+  <p class="hint">A copy of your cards, places, want list and value history is saved online once a day, when you open Card Vault; the new copy replaces the old one. Restoring puts that copy back; what you had just before is kept too, so a restore can be undone.</p>
   <ul class="bklist" id="bkItems"></ul>
   <div class="actions"><span></span><button type="button" class="btn ghost" id="bkClose">Close</button></div>
 </aside>
@@ -861,6 +861,14 @@ const chk = r => { if(r.error) throw new Error(r.error.message || String(r.error
 const isoDay = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
 async function bodyText(b){ if(b == null) return ""; if(typeof b === "string") return b; if(b instanceof Blob) return await b.text(); return String(b); }
 
+/* ---------- this browser's copy (IndexedDB): opening only downloads what changed ---------- */
+const idb = (() => { let p = null; const open = () => p || (p = new Promise((res) => { try{ const r = indexedDB.open("cardvault", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }catch{ res(null); } }));
+  const tx = async (mode, fn) => { const db = await open(); if(!db) return null; return new Promise(res => { try{ const t = db.transaction("kv", mode), q = fn(t.objectStore("kv")); t.oncomplete = () => res(q && q.result); t.onerror = () => res(null); }catch{ res(null); } }); };
+  return { get: k => tx("readonly", s => s.get(k)), set: (k, v) => tx("readwrite", s => s.put(v, k)) }; })();
+let saveT = 0;
+const keepLocal = () => { clearTimeout(saveT); saveT = setTimeout(() => { if(uid) idb.set("cache:" + uid, {docCache, snapCache, libCache}).catch(()=>{}); }, 1500); };
+async function loadLocal(){ try{ const v = await idb.get("cache:" + uid); if(v){ Object.assign(docCache, v.docCache || {}); Object.assign(snapCache, v.snapCache || {}); if(v.libCache) libCache = v.libCache; } }catch{} }
+
 /* ---------- documents (cards, sources, wants, history, images, snapshot, backups) ---------- */
 const docCache = {};   // name -> {at, body}
 async function getDoc(name, fallback){
@@ -870,19 +878,20 @@ async function getDoc(name, fallback){
   if(c && c.at === meta.updated_at) return c.body;
   const row = chk(await sb.from("docs").select("body,updated_at").eq("user_id", uid).eq("name", name).maybeSingle());
   if(!row) return fallback;
-  docCache[name] = {at: row.updated_at, body: row.body};
+  docCache[name] = {at: row.updated_at, body: row.body}; if(!/^bk-/.test(name)) keepLocal();
   return row.body;
 }
 async function putDoc(name, body){
   const at = new Date().toISOString();
   chk(await sb.from("docs").upsert({user_id: uid, name, body, updated_at: at}));
-  docCache[name] = {at, body};
+  if(/^bk-|^before-restore$/.test(name)) return;
+  docCache[name] = {at, body}; keepLocal();
 }
 
 /* ---------- the set library: this site's library/sets.json + changes saved in Supabase ---------- */
 let repoSets = null, libCache = null;
 async function repoSetList(){
-  if(!repoSets){ try{ const r = await origFetch("library/sets.json?v=" + Math.floor(Date.now()/6e5), {cache:"no-store"}); repoSets = r.ok ? await r.json() : []; }catch{ repoSets = []; } }
+  if(!repoSets){ try{ const r = await origFetch("library/sets.json?v=" + BUILD); repoSets = r.ok ? await r.json() : []; }catch{ repoSets = []; } }
   return Array.isArray(repoSets) ? repoSets : [];
 }
 async function libRow(){
@@ -890,7 +899,7 @@ async function libRow(){
   if(!meta) return null;
   if(libCache && libCache.at === meta.updated_at) return libCache.body;
   const row = chk(await sb.from("library").select("body,updated_at").eq("id","sets").maybeSingle());
-  libCache = row ? {at: row.updated_at, body: row.body} : null;
+  libCache = row ? {at: row.updated_at, body: row.body} : null; keepLocal();
   return libCache ? libCache.body : null;
 }
 async function getSets(){
@@ -937,6 +946,7 @@ async function allSnapshots(){
   if(need.length){
     const rows = chk(await sb.from("docs").select("user_id,body,updated_at").eq("name","snapshot").in("user_id", need));
     for(const r of rows) snapCache[r.user_id] = {at: r.updated_at, body: r.body};
+    keepLocal();
   }
   const keep = new Set(metas.map(m=>m.user_id)); for(const k in snapCache) if(!keep.has(k)) delete snapCache[k];
   shareIndex = {};
@@ -945,7 +955,7 @@ async function allSnapshots(){
   return snapCache;
 }
 
-/* ---------- backups: a copy of my lists once a day, last 14 kept ---------- */
+/* ---------- backup: a copy of my lists once a day; the new one replaces the old ---------- */
 let bkInfo = {last:"", error:""};
 async function backupList(){
   const rows = chk(await sb.from("docs").select("name,updated_at").eq("user_id", uid).like("name", "bk-%"));
@@ -960,7 +970,7 @@ async function ensureBackup(force){
     if(!body.cards || !body.cards.length) return;      // nothing to keep yet
     body.size = JSON.stringify(body).length;
     await putDoc(name, body);
-    const old = (await backupList()).slice(14).map(r=>r.name);
+    const old = (await backupList()).filter(r => r.name !== name).map(r=>r.name);   // the new copy replaces the old one
     if(old.length) chk(await sb.from("docs").delete().eq("user_id", uid).in("name", old));
     bkInfo = {last: fmtAt(new Date().toISOString()), error:""};
   }catch(e){ bkInfo.error = e.message; }
@@ -982,7 +992,7 @@ async function api(url, method, rawBody){
   }
   if((m = p.match(/^\/api\/catalog\/([A-Za-z0-9_-]{1,64})$/))){
     const id = m[1];
-    if(method === "GET"){ const r = await origFetch("library/catalog/" + id + ".json?v=" + Math.floor(Date.now()/6e5), {cache:"no-store"}); return r.ok ? J(await r.json()) : T("Not found", 404); }
+    if(method === "GET"){ const r = await origFetch("library/catalog/" + id + ".json?v=" + BUILD); return r.ok ? J(await r.json()) : T("Not found", 404); }
     if(method === "DELETE"){
       const snaps = await allSnapshots(), users = [];
       for(const k in snaps){ if(k === uid) continue; const b = snaps[k].body || {}; if((b.cards||[]).some(c => c.setId === id)) users.push(b.name || "a friend"); }
@@ -1037,7 +1047,7 @@ async function api(url, method, rawBody){
     const rows = chk(await sb.from("inbox").select("id,data").order("id"));
     return J(rows.map(r => ({name: String(r.id), data: r.data})));
   }
-  if(p === "/api/backup"){ if(method === "POST") await ensureBackup(true); return J({enabled:true, dir:"online, last 14 days", last: bkInfo.last, error: bkInfo.error}); }
+  if(p === "/api/backup"){ if(method === "POST") await ensureBackup(true); return J({enabled:true, dir:"online, the latest copy", last: bkInfo.last, error: bkInfo.error}); }
   if(p === "/api/backups"){
     const rows = await backupList(), list = [];
     for(const r of rows){ const d = r.name.slice(3); list.push({name: "card-vault-" + d + ".zip", at: fmtAt(r.updated_at), size: 0}); }
@@ -1292,7 +1302,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1793980745";
+const BUILD = "1793981197";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1321,6 +1331,7 @@ async function start(session){
     window.cvInboxKey = k || "";
   }catch{ window.cvInboxKey = ""; }
   $$("#cvGate").hidden = true;
+  await loadLocal();
   try{ await loadImages(); const s = await getDoc("snapshot", null); shareMap = (s && s.photos) || {}; Object.assign(shareIndex, shareMap); }catch(e){ console.warn(e); }
   const main = document.getElementById("cvMain"), sc = document.createElement("script");
   sc.textContent = main.textContent; document.body.appendChild(sc);
@@ -1364,7 +1375,7 @@ function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTim
 
 async function getList(name){
   const r = await fetch("/api/"+name, {cache:"no-store"});
-  if(!r.ok) throw new Error("server answered " + r.status);
+  if(!r.ok) throw new Error("Card Vault online answered " + r.status);
   const list = await r.json();
   return Array.isArray(list) ? list : [];
 }
@@ -2230,7 +2241,7 @@ async function saveBulk(common, fail){
       if(list.length) price130(list);
       toast(`Box added: ${units} card${units===1?"":"s"}. Click Card Vault search on the SportsCardsPro tab: the box cost is split by value when prices arrive`);
     } else toast(`Added ${units} card${units===1?"":"s"} from ${set.year} ${set.name}`);
-  }catch(err){ fail("Couldn't save: "+(err?.message||"is the server running?")) }
+  }catch(err){ fail("Couldn't save: "+(err?.message||"check your internet connection")) }
 }
 
 async function save(e){
@@ -2307,7 +2318,7 @@ async function save(e){
       $("#f_setid").value = keep; updateMatch(); msg.hidden = true; $("#f_setnum").focus();
       if(fromFind){ fromFind = false; verWant = ""; $("#f_find").value = ""; setMode("find"); $("#f_find").focus(); }
     } else closeDrawers();
-  }catch(err){ fail("Couldn't save: "+(err?.message||"is the server running?")) }
+  }catch(err){ fail("Couldn't save: "+(err?.message||"check your internet connection")) }
 }
 
 let confirmDel=false;
@@ -2354,7 +2365,7 @@ async function requestSet(e){
     await commit("sets", list=>{ if(!list.some(x=>key(x)===key(s))) list.push(s); return list; });
     f.year.value=""; f.name.value=""; msg.hidden=true;
     toast("Requested. Ask Claude to load your requested sets.");
-  }catch(err){ msg.textContent="Couldn't save: "+(err?.message||"is the server running?"); msg.hidden=false }
+  }catch(err){ msg.textContent="Couldn't save: "+(err?.message||"check your internet connection"); msg.hidden=false }
 }
 const delArm = {};
 async function removeSet(id, btn){
@@ -2481,7 +2492,7 @@ $("#pickAdd").onclick=async ()=>{
     await commit("cards", list=>[...list, ...fresh]);
     pickMode = false; picked = new Map(); render();
     toast(`Added ${fresh.length} card${fresh.length===1?"":"s"} from ${set.year} ${set.name}`);
-  }catch(err){ toast("Couldn't save: " + (err?.message || "is the server running?")); $("#pickAdd").disabled = false; }
+  }catch(err){ toast("Couldn't save: " + (err?.message || "check your internet connection")); $("#pickAdd").disabled = false; }
 };
 $("#clModes").onclick=e=>{ const b=e.target.closest("[data-cl]"); if(b){ filt.cl=b.dataset.cl; saveFilt(); render(); } };
 $("#clSub").addEventListener("change",e=>{ filt.sub=e.target.value; saveFilt(); render(); });
@@ -3428,7 +3439,7 @@ $("#mApply").onclick = async ()=>{
     if(from){ LS.set("cv-lastFrom", from); if(!sources.includes(from)) saveSources([...sources, from]); }
     toast(`Updated ${selIds.size} card${selIds.size===1?"":"s"}`);
     closeDrawers();
-  }catch(err){ $("#mMsg").textContent = "Couldn't save: " + (err?.message||"is the server running?"); $("#mMsg").hidden = false; }
+  }catch(err){ $("#mMsg").textContent = "Couldn't save: " + (err?.message||"check your internet connection"); $("#mMsg").hidden = false; }
   finally{ $("#mApply").disabled = false; }
 };
 $("#mDel").onclick = async ()=>{
@@ -3438,7 +3449,7 @@ $("#mDel").onclick = async ()=>{
     await commit("cards", list=>list.filter(c=>!selIds.has(c.id)));
     toast(`Deleted ${n} card${n===1?"":"s"}`);
     selIds = new Set(); closeDrawers(); renderSelBar();
-  }catch(err){ $("#mMsg").textContent = "Couldn't delete: " + (err?.message||"is the server running?"); $("#mMsg").hidden = false; }
+  }catch(err){ $("#mMsg").textContent = "Couldn't delete: " + (err?.message||"check your internet connection"); $("#mMsg").hidden = false; }
 };
 
 /* ---------- filter panel: open/close, active-filter tags ---------- */
@@ -4093,7 +4104,7 @@ $("#clMissing").onclick = async ()=>{
 $("#bkList").onclick = async ()=>{
   let list = []; try{ list = (await (await fetch("/api/backups", {cache:"no-store"})).json()).list || []; }catch{}
   $("#bkItems").innerHTML = list.length ? list.map(b=>`<li><span>${esc(b.at)} · ${(b.size/1048576).toFixed(1)} MB</span><button type="button" class="btn ghost" data-restore="${esc(b.name)}">Restore</button></li>`).join("")
-    : `<li>No backups found (restart the Card Vault server once to enable this list).</li>`;
+    : `<li>No backup yet: one is saved each day when you open Card Vault.</li>`;
   $("#scrim").hidden = $("#bkDrawer").hidden = false;
 };
 $("#bkClose").onclick = closeDrawers;
