@@ -966,5 +966,16 @@
     "count": 620,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/256860/2020-21-Panini-Prizm-Premier-League",
     "note": "TCDB: 2020 21 Panini Prizm Premier League · 15 subsets · 145 parallels"
+  },
+  {
+    "id": "mvsccucl2122",
+    "year": "2021/22",
+    "name": "Topps Stadium Club Chrome UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-06T20:18:07.000Z",
+    "count": 259,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/297862/2021-22-Stadium-Club-Chrome-UEFA-Champions-League",
+    "note": "TCDB: 2021 22 Stadium Club Chrome UEFA Champions League · 9 subsets · 48 parallels"
   }
 ]
