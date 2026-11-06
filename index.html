@@ -2752,7 +2752,9 @@ async function applyPhotoResults(results, site){
     let body = null;
     if(is130){ if(results[c.id]===null) continue; const u = bestSalePhoto(c, results[c.id]); if(!u){ miss.add(c.id); continue; } body = {file: photoFile(c), url: u}; }
     else { const hit = bestScpRow(c, results[c.id], "photo"); if(!hit || !/^[A-Za-z0-9]{6,64}$/.test(hit.img||"")){ miss.add(c.id); continue; }
-      got.set(c.id, {file: `https://storage.googleapis.com/images.pricecharting.com/${hit.img}/1600.jpg`, src:"SCP"}); scp++; continue; }
+      const u = `https://storage.googleapis.com/images.pricecharting.com/${hit.img}/1600.jpg`;
+      if((c.badPics||[]).includes(u)){ miss.add(c.id); continue; }   // the photo you marked wrong: counts as not found
+      got.set(c.id, {file: u, src:"SCP"}); scp++; continue; }
     let r = null;
     try{ const res = await fetch("/api/save-photo", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); r = res.ok ? await res.json() : null; }catch{}
     if(r && r.ok){ got.set(c.id, {file:r.file, src:r.source}); if(r.source==="eBay") eb++; else scp++; }
