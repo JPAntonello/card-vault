@@ -2532,7 +2532,7 @@ const nrm = s => !s ? "" : String(s).replace(/[øØ]/g,"o").replace(/[æÆ]/g,"a
   .normalize("NFD").replace(/\p{Mn}/gu,"").toLowerCase().replace(/[^a-z0-9#\[\]\/ ]/g," ").replace(/\s+/g," ").trim();
 const wordSet = s => [...new Set(nrm(s).split(" ").filter(w=>w && !/^prizms?$/.test(w)))].sort().join(" ");
 // short forms sellers use: the word is known when the card itself has one of these meanings
-const WORD_MEANS = {wc:["world cup","wc"], rated:["rated rookie","rated rookies","rated"], usmnt:["united states","usa","usmnt","us men s national team"], usa:["united states","usmnt"], epl:["premier league"]};
+const WORD_MEANS = {wc:["world cup","wc"], rated:["rated rookie","rated rookies","rated"], usmnt:["united states","usa","usmnt","us men s national team"], usa:["united states","usmnt"], epl:["premier league"], silver:["holo"]};
 const SET_STOP = new Set("panini topps soccer fifa uefa the of to set team road club competitions champions league pl premier world cup edition football futbol cards card and x".split(" "));
 const PAR_WORDS = "pixel|bronze|aqua|icy|kaleidoscopic|refractor|parallel|holo|optic|cubic|silver|gold|green|purple|orange|blue|red|pink|black|white|yellow|teal|wave|shimmer|mojo|sparkle|foil|breakaway|disco|hyper|pulsar|choice|cracked|ice|velocity|laser|lazer|camo|snakeskin|scope|circles|reactive|genesis|fluorescent|speckle|halo|static";
 // the names of the set's versions, from its checklist: "big apple", "aqua lava refractor" and "aqua lava", "club country"…
@@ -2639,15 +2639,18 @@ function cardMatch(title, c, strict){
     for(const w of wordSet(par).split(" ")){ if(!w) continue;
       const need = (" "+set+" ").includes(" "+w+" ") ? 2 : 1;
       if((t.match(new RegExp("(?<![a-z0-9])"+reEsc(w),"g"))||[]).length < need) return -1; }
-    if(par){ const mine = ` ${wordSet(par)} ${set} ${nrm(c.team)} `;
+    // "Holo" parallels are sold as "Holo Silver" / "Silver Holo"
+    if(par){ const mine = ` ${wordSet(par)} ${set} ${nrm(c.team)} ${/\bholo\b/.test(wordSet(par)) && /\bholo\b/.test(t) ? "silver" : ""} `;
       for(const m of t.matchAll(new RegExp("\\b("+PAR_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return -1; }
     else {
       if(new RegExp("\\b("+PAR_WORDS+"|sp|ssp)\\b").test(t) && !/\b(optic|chrome)\b/.test(set)) return -1;
       if(!set.includes("mosaic") && /\bmosaic\b/.test(t)) return -1;
     }
-    for(const m of t.matchAll(new RegExp("\\b("+OTHER_SETS+")\\b","g"))) if(!(` ${set} ${nrm(c.variant)} ${nrm(c.parallel)} `).includes(" "+m[1]+" ")) return -1;   // a different product line
+    // "Prizm" after a Donruss/Optic/Select card's own product name is how sellers say "shiny" ("Optic Holo Silver Prizm")
+    const ownLine = ` ${set} ${nrm(c.variant)} ${nrm(c.parallel)} `, ownNamed = /\b(donruss|optic|select|mosaic)\b/.test(ownLine) && [...ownLine.matchAll(/\b(donruss|optic|select|mosaic)\b/g)].some(m=>t.includes(" "+m[1]+" "));
+    for(const m of t.matchAll(new RegExp("\\b("+OTHER_SETS+")\\b","g"))) if(!ownLine.includes(" "+m[1]+" ") && !(m[1]==="prizm" && ownNamed)) return -1;   // a different product line
     // every parallel and insert of the set's checklist (Big Apple, Lava, Mini-Diamonds…): only when this card is that version
-    { const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${nrm(c.team)} ${ownTags(c)} `;   // the team counts as known ("Red" in "Red Bull Salzburg")
+    { const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${nrm(c.team)} ${ownTags(c)} ${/\bholo\b/.test(nrm(c.parallel)) && /\bholo\b/.test(t) ? "silver holo silver silver holo silver prizm holo prizm" : ""} `;   // the team counts as known ("Red" in "Red Bull Salzburg")
       for(const ph of versionPhrases(c.setId)) if(!own.includes(" "+ph+" ") && t.includes(" "+ph+" ")) return -1;
       const cat0 = catalogs[c.setId]; const ownW = own + ` ${set} ${nrm(c.player)} ` + (!c.parallel && cat0 && cat0.parallels.some(p=>/^common\b/i.test(p.name)) ? " common yellow " : "");
       for(const w of (catalogs[c.setId]||{})._words||[]) if(!ownW.includes(" "+w+" ") && t.includes(" "+w+" ")) return -1;
