@@ -428,6 +428,7 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 
 body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,body.noprice #sGainW,body.ro .vbadge,body.ro .val,body.ro .pl-row,body.ro .spark,body.ro #sGainW{display:none!important}
 #eyeBtn{white-space:nowrap}
+.scpPaste{display:flex;gap:6px;margin:4px 0}.scpPaste input{flex:1;min-width:0;padding:6px 10px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
 .scpC{display:flex;flex-direction:column;gap:8px;margin:6px 0}
 .scpO{display:flex;gap:10px;align-items:flex-start}
 .scpO img,.scpO .noimg{width:64px;min-width:64px;height:88px;object-fit:contain;border-radius:6px;background:#f2f2f5;font-size:11px;display:flex;align-items:center;justify-content:center}
@@ -1319,7 +1320,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794015588";
+const BUILD = "1794016153";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2311,7 +2312,7 @@ async function save(e){
       Object.assign(data, {value:nv, valueDate: nv==="" ? "" : new Date().toISOString().slice(0,10), valueSource: nv==="" ? "" : "Manual", valueNote:"", valueSales:[], valueUrl: nv==="" ? "" : f.valueUrl.value.trim()});
     } else if(f.valueUrl.value.trim() !== (f.valueUrl.dataset.orig ?? "")) data.valueUrl = f.valueUrl.value.trim();
     // a SportsCardsPro page typed in the link field becomes the card's price page
-    if(/sportscardspro\.com\/game\//.test(data.valueUrl||"") && f.valueUrl.value.trim() !== (f.valueUrl.dataset.orig ?? "")){ data.scpUrl = data.valueUrl; data.scpReview = null; }
+    if(/sportscardspro\.com\/game\//.test(data.valueUrl||"") && f.valueUrl.value.trim() !== (f.valueUrl.dataset.orig ?? "")){ data.scpUrl = data.valueUrl.replace(/[?#].*$/,""); data.scpReview = null; data.scpNone = ""; data.scpNew = true; }
   }
   data.photo = editing?.photo || ""; data.photoV = editing?.photoV || "";
   data.image = chosenImage===TCDB ? "" : chosenImage;
@@ -2967,6 +2968,16 @@ function priceScp(list){
   openFind("scp", "price", list.map(c=>[c.id, ...(c.scpUrl ? [c.scpUrl] : scpQueries(c))]));
   $("#priceHelp").open = true; renderPriceBar();
 }
+// a SportsCardsPro page you give for a card: kept as its price page; the next SportsCardsPro update reads its price
+async function setScpLink(c, raw){
+  const u = String(raw||"").trim(); if(!u) return false;
+  if(!/^https?:\/\/(www\.)?sportscardspro\.com\/game\//i.test(u)){ toast("That is not a SportsCardsPro card page (it starts with sportscardspro.com/game/…)"); return false; }
+  const url = u.replace(/[?#].*$/,"");
+  try{ await commit("cards", all=>all.map(x=>x.id!==c.id ? x : {...x, scpUrl: url, scpReview: null, scpNone: "", scpNew: true, scpBad: (x.scpBad||[]).filter(b=>!sameUrl(b, url))})); }
+  catch(err){ toast("Couldn't save: " + err.message); return false; }
+  LS.set("cv-130list", JSON.stringify(lsList("cv-130list").filter(id=>id!==c.id)));
+  toast("SportsCardsPro page saved · click SportsCardsPro to read its price"); renderPriceBar(); return true;
+}
 // any set of cards: SportsCardsPro for those it can price, the rest wait for 130point (its button shows them)
 function priceSmart(list){
   const w = new Set(lsList("cv-130list")), s = list.filter(c=>scpCan(c) && !w.has(c.id)), r = list.filter(c=>!s.includes(c) && !c.scpReview);
@@ -2983,7 +2994,7 @@ function price130(list){
 }
 const keepManual = () => LS.get("cv-keepManual")==="1";
 function toPrice(){ const w = new Set(lsList("cv-130list"));
-  return myCards.filter(c=>priceable(c) && ((!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried)))) || needPhoto(c))); }
+  return myCards.filter(c=>priceable(c) && (c.scpNew || (!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried)))) || needPhoto(c))); }
 // new cards (no price) first, then the most valuable; at most 100 per run so 130point does not block the searches
 const RUN_MAX = 100;
 const byPriority = (a,b) => ((b.priceAlt===1) - (a.priceAlt===1)) || ((Number(a.value)>0) - (Number(b.value)>0)) || (Number(b.value)||0) - (Number(a.value)||0);
@@ -3246,7 +3257,8 @@ async function applyPriceResults(site, results){
   const photoNow = new Date().toISOString();
   const withPic = c => pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
-  const scpF = c => scpLink.has(c.id) ? {...c, scpUrl: scpLink.get(c.id), scpReview: null}
+  const scpF0 = c => site==="scp" && c.scpNew && results[c.id] ? {...c, scpNew: false} : c;
+  const scpF = c => (c = scpF0(c), scpLink.has(c.id)) ? {...c, scpUrl: scpLink.get(c.id), scpReview: null}
     : scpRev.has(c.id) ? {...c, scpReview: {cands: scpRev.get(c.id), at: day}}
     : scpNone.has(c.id) ? {...c, scpNone: day} : c;
   await commit("cards", all=>all.map(withPic).map(scpF).map(c=> upd.has(c.id)
@@ -4115,6 +4127,7 @@ function renderReview(){
       <div class="rvinfo"><b>${esc(nameOf(c))} #${esc(c.number||"")}</b><span>${esc([c.year, c.set, c.variant||"Base"].filter(Boolean).join(" · "))}</span>
         <span class="rvwhy">Which SportsCardsPro page is your card? It is used for every price update after this.</span>
         <div class="scpC">${c.scpReview.cands.map(([t,v,im,u],i)=>`<div class="scpO">${im?`<img src="${esc(scpImg(im))}" alt="" referrerpolicy="no-referrer">`:`<span class="noimg">No photo</span>`}<div><a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a><span>${v>0?money(v):"no ungraded price"}</span><button type="button" class="btn" data-scpok="${i}">This one</button></div></div>`).join("")}</div>
+        <div class="scpPaste"><input type="url" placeholder="Or paste the right SportsCardsPro link" data-scpurl><button type="button" class="btn ghost" data-scpsave>Save link</button></div>
         <div class="rvbtns"><button type="button" class="btn ghost" data-scpno>None of these: use 130point</button></div>
       </div></div>`; }).join("");
   const list = myCards.filter(c=>c.review);
@@ -4142,6 +4155,8 @@ $("#rvList").onclick = async e=>{
         await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, scpUrl: u, scpReview: null, ...(v>0 ? {value: Math.round(v*100)/100, valueDate: day, valueSource: "SportsCardsPro", valueNote: "Ungraded · SportsCardsPro", valueUrl: u, valueSales: [], priceTried: "", priceAlt: 0, review: null, rejSales: []} : {})}));
         if(!(v>0)) LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), id])]));
         toast(v>0 ? `${nameOf(c)}: ${money(v)} from SportsCardsPro` : `${nameOf(c)}: page saved · no ungraded price there yet, so 130point is used`);
+      } else if(e.target.closest("[data-scpsave]")){
+        if(!(await setScpLink(c, sr.querySelector("[data-scpurl]").value))) return;
       } else if(e.target.closest("[data-scpno]")){
         await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, scpReview: null, scpNone: day, scpBad: [...new Set([...(x.scpBad||[]), ...c.scpReview.cands.map(r=>r[3])])].slice(-20)}));
         LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), id])]));
@@ -4211,6 +4226,7 @@ function openCardPage(c){
     ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">${scpCan(c) ? "Update price now" : "Search 130point now"}</button>`:""}
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
     <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
+    ${!c.scpUrl && priceable(c) ? `<button type="button" class="btn ghost" id="cdAddScp" title="Paste this card's SportsCardsPro page: its price is read from there on every update">SportsCardsPro link</button>` : ""}
     ${c.scpUrl ? `<button type="button" class="btn ghost" id="cdBadScp" title="This SportsCardsPro page is not your card: the link and its price are removed; the next update looks for the right page">Wrong SportsCardsPro page</button>` : ""}
     ${c.valueUrl && /ebay/i.test(c.valueSource||"") ? `<button type="button" class="btn ghost" id="cdBadSale" title="This sale is not your card: the price is removed and the next 130point search skips this sale">Wrong sale</button>` : ""}
     ${c.image||c.photo?`<button type="button" class="btn ghost" id="cdBadPic" title="Removes this photo from the card; TCDB's photo is not taken again. Add your own with Edit.">Wrong photo</button>`:""}`;
@@ -4224,6 +4240,10 @@ $("#cdActs").onclick = async e=>{
   else if(e.target.id==="cdPrice"){ closeDrawers(); scpCan(c) && !lsList("cv-130list").includes(c.id) ? priceScp([c]) : price130([c]); }
   else if(e.target.id==="cdCopies"){ closeDrawers(); openCopies(myCards.filter(x=>dupKey(x)===dupKey(c)).map(x=>x.id)); }
   else if(e.target.id==="cdGone"){ closeDrawers(); c.gone ? bringBack(c) : openGone(c); }
+  else if(e.target.id==="cdAddScp"){
+    const u = prompt("Paste this card's SportsCardsPro page link (sportscardspro.com/game/…)"); if(!u) return;
+    if(await setScpLink(c, u)) openCardPage(myCards.find(x=>x.id===c.id));
+  }
   else if(e.target.id==="cdBadScp"){
     try{ await commit("cards", all=>all.map(x=> x.id!==c.id ? x : {...x, scpBad:[...new Set([...(x.scpBad||[]), x.scpUrl])].slice(-20), scpUrl:"", scpNone:"",
         ...(x.valueSource==="SportsCardsPro" ? {value:"", valueDate:"", valueSource:"", valueNote:"Wrong SportsCardsPro page removed", valueUrl:"", valueSales:[], priceTried:""} : {})}));
