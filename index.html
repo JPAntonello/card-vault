@@ -428,6 +428,10 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 
 body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,body.noprice #sGainW,body.ro .vbadge,body.ro .val,body.ro .pl-row,body.ro .spark,body.ro #sGainW{display:none!important}
 #eyeBtn{white-space:nowrap}
+.rejs .rsRow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:6px 0;border-top:1px solid #0001}
+.rejs .rsRow a{flex:1 1 100%}
+.rejs .rsWhy{flex:1;color:#b45309;font-size:12px}
+.rejs .rsOk{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid #0071e3;background:#fff;color:#0071e3;cursor:pointer}
 </style>
 </head>
 <body>
@@ -559,7 +563,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
       <summary title="How it works">?</summary>
       <ol>
         <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmFind" href="#">Card Vault search</a> (if you have an older "Card Vault prices" bookmark, delete it; keep "Card Vault photos", it is for TCDB).</li>
-        <li>Click <b>Search 130point</b>. A 130point page opens: click the <b>Card Vault search</b> bookmark there and keep the tab open until it says done. Each card is searched by its name and set. The price is always the <b>last sale</b> of exactly your version of the card (same base, parallel or numbered version, ungraded, no autos unless yours is one); with no sale of that version, no price. Photos are not taken from sales: they come from the TCDB checklist (Card Vault photos bookmark) or from you.</li>
+        <li>Click <b>Search 130point</b>. A 130point page opens: click the <b>Card Vault search</b> bookmark there and keep the tab open until it says done. Each card is searched by its name and set; when that finds fewer than 3 sales, shorter searches (player + number, player + set) run too. The price is the <b>middle of the last 3 sales</b> of exactly your version of the card (same base, parallel or numbered version, ungraded, no autos unless yours is one); with only 1 sale it is marked uncertain; with no sale of that version, no price. A card with no price lists the sales the search saw and why each was not counted: <b>This is my card</b> takes one as its price.</li>
         <li>If a run stops before the end (130point not answering, or its daily limit), click <b>Search 130point</b> again later: it continues with the cards that were not reached.</li>
         <li>Prices you typed yourself are also updated when 130point finds sales of the card; if it finds none, your price stays. Cards updated in the last 7 days are skipped.</li>
       </ol>
@@ -1309,7 +1313,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794002721";
+const BUILD = "1794014702";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2566,7 +2570,7 @@ const isoDay = () => new Date().toISOString().slice(0,10);
 /* ---------- searching other sites with the "Card Vault search" bookmark ----------
    SportsCardsPro and 130point refuse requests from the Card Vault server, so the bookmark reads
    them inside Chrome and saves what it saw to Downloads; the server hands that file to the app. */
-const FIND_BOOKMARKLET = "javascript:" + "(async()=>{let W=null,wq=0,wr={};try{W=new Worker(URL.createObjectURL(new Blob(['onmessage=e=>setTimeout(()=>postMessage(e.data[0]),e.data[1])'],{type:'text/javascript'})));W.onmessage=e=>{const f=wr[e.data];delete wr[e.data];if(f)f()};W.onerror=()=>{W=null;for(const k in wr){setTimeout(wr[k],0);delete wr[k]}}}catch(e){W=null}const S=ms=>new Promise(r=>{if(W){const k=++wq;wr[k]=r;try{W.postMessage([k,ms])}catch(e){delete wr[k];setTimeout(r,ms)}}else setTimeout(r,ms)});let s=decodeURIComponent((location.hash.match(/cvfind=([^&]*)/)||[])[1]||'');if(!s)s=prompt('Paste the Card Vault search list');if(!s)return;let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}if(!O&&!J.k){try{const w=window.open('https://jpantonello.github.io/card-vault/#cvrecv','cvrecv','width=460,height=360');if(w){await new Promise(r=>{let k=0;const h=e=>{if(e.source===w&&e.data&&e.data.cv==='ack'){O=w;removeEventListener('message',h);clearInterval(t);r()}};addEventListener('message',h);const t=setInterval(()=>{try{w.postMessage({cv:'hello'},'*')}catch(e){}if(++k>60){clearInterval(t);removeEventListener('message',h);r()}},500)})}}catch(e){}}const L=J.items||[],kind=J.kind||'price';const box=document.createElement('div');box.style.cssText='position:fixed;z-index:2147483647;top:12px;right:12px;max-width:380px;background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 16px #0006';document.body.appendChild(box);let out={},i=0,got=0,site='',stop=0,sent=0,files=0,last=null,err='';const T0=document.title;const K='cv130part';const keep=()=>{if(site!=='130point')return;try{localStorage.setItem(K,JSON.stringify({t:Date.now(),r:out}))}catch(e){flush()}};const flush=()=>{const n=Object.keys(out).length;if(!n)return;const pl={site,kind,at:new Date().toISOString(),results:out};const dl=()=>{if(O){O.postMessage({cv:'prices',data:pl},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pl)],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a}};if(J.k){fetch('https://xqtzocgsmcnhlqenjefa.supabase.co/rest/v1/rpc/inbox_put',{method:'POST',headers:{'apikey':'sb_publishable_03txPDqVwKymwIYch8_QVw_io7z-D0X','Content-Type':'application/json'},body:JSON.stringify({k:J.k,d:pl})}).then(r=>{if(!r.ok)throw 0}).catch(dl)}else dl();sent+=n;files++;out={};try{localStorage.removeItem(K)}catch(e){}};const short=u=>String(u||'').replace(/[?#].*$/,'');try{if(/sportscardspro\\.com$/.test(location.hostname)){site='scp';const num=t=>Number(String(t||'').replace(/[^0-9.]/g,''))||0;for(const [id,...qs] of L){i++;box.textContent='Card Vault: SportsCardsPro '+i+' of '+L.length+' (keep this tab open)';let rows=[];for(const q of qs){if(!q)continue;let h='',u='';for(let k=0;k<3;k++){const r=await fetch(/^https?:/.test(q)?new URL(q).pathname:'/search-products?type=prices&q='+encodeURIComponent(q));if(r.status===403){stop=1;break}if(r.status===429){box.textContent='Card Vault: SportsCardsPro asked to slow down, waiting\u2026';await S(30000);continue}h=await r.text();u=r.url;break}if(stop)break;const d=new DOMParser().parseFromString(h,'text/html');if(d.querySelector('#product_details')){const j=h.indexOf('id=\"product_details\"');const m=h.slice(j).match(/images\\.pricecharting\\.com\\/(\\w+)\\/\\d+\\.jpg/);const p=d.querySelector('#used_price .price');rows=[[((d.querySelector('h1')||{}).textContent||'').replace(/\\s+/g,' ').trim(),num(p&&p.textContent),m?m[1]:'',short(u)]]}else{rows=[...d.querySelectorAll('tr[id^=\"product-\"]')].slice(0,60).map(tr=>{const a=tr.querySelector('td.title a'),c=tr.querySelector('.console-in-title a'),p=tr.querySelector('td.used_price .js-price'),im=tr.querySelector('img');const m=((im&&im.getAttribute('src'))||'').match(/pricecharting\\.com\\/(\\w+)\\//);return[((a?a.textContent:'')+' '+(c?c.textContent:'')).replace(/\\s+/g,' ').trim(),num(p&&p.textContent),m?m[1]:'',a?new URL(a.getAttribute('href'),location.origin).href:'']})}if(rows.length)break;await S(700)}if(stop)break;out[id]=rows;if(rows.length)got++;if(Object.keys(out).length>=150)flush();await S(900)}}else if(/130point\\.com$/.test(location.hostname)){site='130point';let P={};try{const o=JSON.parse(localStorage.getItem(K)||'{}');if(o.t&&Date.now()-o.t<5*864e5)P=o.r||{}}catch(e){}const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;const res=()=>document.querySelector('#search-results-html');for(const [id,q1,q2] of L){let q=q1;i++;if(id in P){out[id]=P[id];if(P[id]&&P[id].length)got++;continue}box.textContent='Card Vault: 130point '+i+' of '+L.length+(sent?' \u00b7 '+sent+' sent to the app':'')+' (keep this tab open)';document.title='CV '+i+'/'+L.length+' \u00b7 '+T0;let n=null;const ask=async()=>{for(let k=0;k<2&&!n;k++){const el=[...document.querySelectorAll('input')].find(x=>x.offsetParent&&/text|search/.test(x.type));if(!el||/moment|just a|attention/i.test(document.title)){stop=1;break}const old=res();if(old&&!old.hasAttribute('data-cv-old')&&el.value.trim()===q.trim()){n=old;break}if(old)old.setAttribute('data-cv-old','1');set.call(el,q);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,bubbles:true}));for(let t=0;t<36;t++){await S(250);const c=res();if(c&&!c.hasAttribute('data-cv-old')){n=c;break}}}};await ask();if(!stop&&!n&&/daily search limit/i.test(document.body.innerText))stop=2;if(!stop&&!n)flush();for(const w of [60,120,240,480]){if(stop||n)break;const cf=/search error|cloudflare/i.test((document.querySelector('#search-results-container')||document.body).innerText);for(let left=w;left>0;left-=5){box.textContent='Card Vault: '+(cf?'130point\\'s protection (Cloudflare) paused the searches: too many in a short time.':'130point is not answering right now.')+' Waiting '+left+' s and trying again (card '+i+' of '+L.length+(sent?' \u00b7 '+sent+' sent to the app':'')+'). Keep this tab open.';document.title='CV wait '+left+'s \u00b7 '+T0;await S(5000)}await ask();if(!stop&&!n&&/daily search limit/i.test(document.body.innerText))stop=2}if(!stop&&!n)stop=3;if(stop)break;if(!n){out[id]=null}else{const grab=()=>[...res().querySelectorAll('[data-sold-result]')].slice(0,200).map(e=>[(e.dataset.itemTitle||'').slice(0,150),Number(e.dataset.itemPrice)||0,e.dataset.itemCurrency||'',(e.dataset.itemEndtime||'').slice(0,10),short(e.dataset.itemUrl||e.dataset.itemLink||((e.querySelector('a[href*=\"ebay.\"]')||e.querySelector('a[href^=\"http\"]')||{}).href)),(e.dataset.itemImage||(e.querySelector('img')||{}).src||'')]);await S(300);out[id]=grab();if(!out[id].length&&q2&&q2!==q1){await S(4000+Math.floor(Math.random()*2000));q=q2;n=null;await ask();if(n){await S(300);out[id]=grab()}}if(out[id].length)got++}if(Object.keys(out).length>=25)flush();else keep();if(n)await S(6000+Math.floor(Math.random()*3000))}}else if(/(^|\\.)ebay\\.[a-z.]+$/.test(location.hostname)){site='ebay';for(const [id,u] of L){i++;box.textContent='Card Vault: eBay sale photo '+i+' of '+L.length+' (keep this tab open)';let row=null;try{const p=new URL(u).pathname;for(let k=0;k<2&&!row;k++){const r=await fetch(p);if(r.status===403||r.status===429){await S(15000);continue}const h=await r.text();const d=new DOMParser().parseFromString(h,'text/html');const m=d.querySelector('meta[property^=og][property$=image]');const im=(m&&m.getAttribute('content'))||((d.querySelector('.ux-image-carousel-item img')||{}).src)||'';const t=((d.querySelector('meta[property^=og][property$=title]')||{}).content)||'';row=[t,0,im,u];break}}catch(e){}out[id]=row&&row[2]?[row]:[];if(out[id].length)got++;if(Object.keys(out).length>=25)flush();await S(1500+Math.floor(Math.random()*1000))}}else{alert('Card Vault: use this bookmark on the SportsCardsPro or 130point page that Card Vault opened.');box.remove();return}}catch(e){err=String(e&&e.message||e)}flush();try{if(O)setTimeout(()=>O.postMessage({cv:'done'},'*'),500)}catch(e){}const tot=sent;document.title=T0;box.textContent=(stop===3?'Card Vault: 130point is still blocking searches after waiting 15 minutes. Reload this 130point page (pass the check if one appears), then click Update prices in the app to continue. ':stop===2?'Card Vault: 130point daily free search limit reached. Sign in to 130point for unlimited searches, or continue tomorrow with Update prices. ':stop?'Card Vault: paused by a security check. Pass the check on this page, then click Update prices in the app again. ':err?'Card Vault: stopped by an error ('+err+'). ':'Card Vault: done. ')+tot+' of '+L.length+' cards sent to the app'+(files>1?' in '+files+' files':'')+'. Back in the app, it updates in a few seconds.';if(last){last.textContent=' Nothing in the app? Click here to save the last file again.';last.style.cssText='color:#7cf;cursor:pointer;display:block;margin-top:6px';box.appendChild(last)}})()";
+const FIND_BOOKMARKLET = "javascript:" + "(async()=>{let W=null,wq=0,wr={};try{W=new Worker(URL.createObjectURL(new Blob(['onmessage=e=>setTimeout(()=>postMessage(e.data[0]),e.data[1])'],{type:'text/javascript'})));W.onmessage=e=>{const f=wr[e.data];delete wr[e.data];if(f)f()};W.onerror=()=>{W=null;for(const k in wr){setTimeout(wr[k],0);delete wr[k]}}}catch(e){W=null}const S=ms=>new Promise(r=>{if(W){const k=++wq;wr[k]=r;try{W.postMessage([k,ms])}catch(e){delete wr[k];setTimeout(r,ms)}}else setTimeout(r,ms)});let s=decodeURIComponent((location.hash.match(/cvfind=([^&]*)/)||[])[1]||'');if(!s)s=prompt('Paste the Card Vault search list');if(!s)return;let J;try{J=JSON.parse(s)}catch(e){alert('Card Vault: that is not a search list');return}let O=null;try{const op=window.opener;if(op){await new Promise(r=>{const h=e=>{if(e.source===op&&e.data&&e.data.cv==='ack'){O=op;removeEventListener('message',h);r()}};addEventListener('message',h);op.postMessage({cv:'hello'},'*');setTimeout(r,1500)})}}catch(e){}if(!O&&!J.k){try{const w=window.open('https://jpantonello.github.io/card-vault/#cvrecv','cvrecv','width=460,height=360');if(w){await new Promise(r=>{let k=0;const h=e=>{if(e.source===w&&e.data&&e.data.cv==='ack'){O=w;removeEventListener('message',h);clearInterval(t);r()}};addEventListener('message',h);const t=setInterval(()=>{try{w.postMessage({cv:'hello'},'*')}catch(e){}if(++k>60){clearInterval(t);removeEventListener('message',h);r()}},500)})}}catch(e){}}const L=J.items||[],kind=J.kind||'price';const box=document.createElement('div');box.style.cssText='position:fixed;z-index:2147483647;top:12px;right:12px;max-width:380px;background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 16px #0006';document.body.appendChild(box);let out={},i=0,got=0,site='',stop=0,sent=0,files=0,last=null,err='';const T0=document.title;const K='cv130part';const keep=()=>{if(site!=='130point')return;try{localStorage.setItem(K,JSON.stringify({t:Date.now(),r:out}))}catch(e){flush()}};const flush=()=>{const n=Object.keys(out).length;if(!n)return;const pl={site,kind,at:new Date().toISOString(),results:out};const dl=()=>{if(O){O.postMessage({cv:'prices',data:pl},'*')}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(pl)],{type:'application/json'}));a.download='cardvault-prices-'+site+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();last=a}};if(J.k){fetch('https://xqtzocgsmcnhlqenjefa.supabase.co/rest/v1/rpc/inbox_put',{method:'POST',headers:{'apikey':'sb_publishable_03txPDqVwKymwIYch8_QVw_io7z-D0X','Content-Type':'application/json'},body:JSON.stringify({k:J.k,d:pl})}).then(r=>{if(!r.ok)throw 0}).catch(dl)}else dl();sent+=n;files++;out={};try{localStorage.removeItem(K)}catch(e){}};const short=u=>String(u||'').replace(/[?#].*$/,'');try{if(/sportscardspro\\.com$/.test(location.hostname)){site='scp';const num=t=>Number(String(t||'').replace(/[^0-9.]/g,''))||0;for(const [id,...qs] of L){i++;box.textContent='Card Vault: SportsCardsPro '+i+' of '+L.length+' (keep this tab open)';let rows=[];for(const q of qs){if(!q)continue;let h='',u='';for(let k=0;k<3;k++){const r=await fetch(/^https?:/.test(q)?new URL(q).pathname:'/search-products?type=prices&q='+encodeURIComponent(q));if(r.status===403){stop=1;break}if(r.status===429){box.textContent='Card Vault: SportsCardsPro asked to slow down, waiting\u2026';await S(30000);continue}h=await r.text();u=r.url;break}if(stop)break;const d=new DOMParser().parseFromString(h,'text/html');if(d.querySelector('#product_details')){const j=h.indexOf('id=\"product_details\"');const m=h.slice(j).match(/images\\.pricecharting\\.com\\/(\\w+)\\/\\d+\\.jpg/);const p=d.querySelector('#used_price .price');rows=[[((d.querySelector('h1')||{}).textContent||'').replace(/\\s+/g,' ').trim(),num(p&&p.textContent),m?m[1]:'',short(u)]]}else{rows=[...d.querySelectorAll('tr[id^=\"product-\"]')].slice(0,60).map(tr=>{const a=tr.querySelector('td.title a'),c=tr.querySelector('.console-in-title a'),p=tr.querySelector('td.used_price .js-price'),im=tr.querySelector('img');const m=((im&&im.getAttribute('src'))||'').match(/pricecharting\\.com\\/(\\w+)\\//);return[((a?a.textContent:'')+' '+(c?c.textContent:'')).replace(/\\s+/g,' ').trim(),num(p&&p.textContent),m?m[1]:'',a?new URL(a.getAttribute('href'),location.origin).href:'']})}if(rows.length)break;await S(700)}if(stop)break;out[id]=rows;if(rows.length)got++;if(Object.keys(out).length>=150)flush();await S(900)}}else if(/130point\\.com$/.test(location.hostname)){site='130point';let P={};try{const o=JSON.parse(localStorage.getItem(K)||'{}');if(o.t&&Date.now()-o.t<5*864e5)P=o.r||{}}catch(e){}const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;const res=()=>document.querySelector('#search-results-html');for(const [id,...Q] of L){let q=Q[0];i++;if(id in P){out[id]=P[id];if(P[id]&&P[id].length)got++;continue}box.textContent='Card Vault: 130point '+i+' of '+L.length+(sent?' \u00b7 '+sent+' sent to the app':'')+' (keep this tab open)';document.title='CV '+i+'/'+L.length+' \u00b7 '+T0;let n=null;const ask=async()=>{for(let k=0;k<2&&!n;k++){const el=[...document.querySelectorAll('input')].find(x=>x.offsetParent&&/text|search/.test(x.type));if(!el||/moment|just a|attention/i.test(document.title)){stop=1;break}const old=res();if(old&&!old.hasAttribute('data-cv-old')&&el.value.trim()===q.trim()){n=old;break}if(old)old.setAttribute('data-cv-old','1');set.call(el,q);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,bubbles:true}));for(let t=0;t<36;t++){await S(250);const c=res();if(c&&!c.hasAttribute('data-cv-old')){n=c;break}}}};await ask();if(!stop&&!n&&/daily search limit/i.test(document.body.innerText))stop=2;if(!stop&&!n)flush();for(const w of [60,120,240,480]){if(stop||n)break;const cf=/search error|cloudflare/i.test((document.querySelector('#search-results-container')||document.body).innerText);for(let left=w;left>0;left-=5){box.textContent='Card Vault: '+(cf?'130point\\'s protection (Cloudflare) paused the searches: too many in a short time.':'130point is not answering right now.')+' Waiting '+left+' s and trying again (card '+i+' of '+L.length+(sent?' \u00b7 '+sent+' sent to the app':'')+'). Keep this tab open.';document.title='CV wait '+left+'s \u00b7 '+T0;await S(5000)}await ask();if(!stop&&!n&&/daily search limit/i.test(document.body.innerText))stop=2}if(!stop&&!n)stop=3;if(stop)break;if(!n){out[id]=null}else{const grab=()=>[...res().querySelectorAll('[data-sold-result]')].slice(0,200).map(e=>[(e.dataset.itemTitle||'').slice(0,150),Number(e.dataset.itemPrice)||0,e.dataset.itemCurrency||'',(e.dataset.itemEndtime||'').slice(0,10),short(e.dataset.itemUrl||e.dataset.itemLink||((e.querySelector('a[href*=\"ebay.\"]')||e.querySelector('a[href^=\"http\"]')||{}).href)),(e.dataset.itemImage||(e.querySelector('img')||{}).src||'')]);await S(300);out[id]=grab();for(const q3 of Q.slice(1)){if(out[id].length>=3||stop)break;if(q3===q)continue;await S(4000+Math.floor(Math.random()*2000));q=q3;n=null;await ask();if(n){await S(300);const seen=new Set(out[id].map(r=>r[4]||r[0]));for(const r of grab())if(!seen.has(r[4]||r[0])){seen.add(r[4]||r[0]);out[id].push(r)}}}if(out[id].length)got++}if(Object.keys(out).length>=25)flush();else keep();if(n)await S(6000+Math.floor(Math.random()*3000))}}else if(/(^|\\.)ebay\\.[a-z.]+$/.test(location.hostname)){site='ebay';for(const [id,u] of L){i++;box.textContent='Card Vault: eBay sale photo '+i+' of '+L.length+' (keep this tab open)';let row=null;try{const p=new URL(u).pathname;for(let k=0;k<2&&!row;k++){const r=await fetch(p);if(r.status===403||r.status===429){await S(15000);continue}const h=await r.text();const d=new DOMParser().parseFromString(h,'text/html');const m=d.querySelector('meta[property^=og][property$=image]');const im=(m&&m.getAttribute('content'))||((d.querySelector('.ux-image-carousel-item img')||{}).src)||'';const t=((d.querySelector('meta[property^=og][property$=title]')||{}).content)||'';row=[t,0,im,u];break}}catch(e){}out[id]=row&&row[2]?[row]:[];if(out[id].length)got++;if(Object.keys(out).length>=25)flush();await S(1500+Math.floor(Math.random()*1000))}}else{alert('Card Vault: use this bookmark on the SportsCardsPro or 130point page that Card Vault opened.');box.remove();return}}catch(e){err=String(e&&e.message||e)}flush();try{if(O)setTimeout(()=>O.postMessage({cv:'done'},'*'),500)}catch(e){}const tot=sent;document.title=T0;box.textContent=(stop===3?'Card Vault: 130point is still blocking searches after waiting 15 minutes. Reload this 130point page (pass the check if one appears), then click Update prices in the app to continue. ':stop===2?'Card Vault: 130point daily free search limit reached. Sign in to 130point for unlimited searches, or continue tomorrow with Update prices. ':stop?'Card Vault: paused by a security check. Pass the check on this page, then click Update prices in the app again. ':err?'Card Vault: stopped by an error ('+err+'). ':'Card Vault: done. ')+tot+' of '+L.length+' cards sent to the app'+(files>1?' in '+files+' files':'')+'. Back in the app, it updates in a few seconds.';if(last){last.textContent=' Nothing in the app? Click here to save the last file again.';last.style.cssText='color:#7cf;cursor:pointer;display:block;margin-top:6px';box.appendChild(last)}})()";
 for(const id of ["#bmFind", "#bmFind2"].filter(x=>$(x))){
   $(id).href = FIND_BOOKMARKLET;
   $(id).addEventListener("click", e=>{ e.preventDefault(); toast("Drag this button to your bookmarks bar, then use it on the SportsCardsPro or 130point page Card Vault opens."); });
@@ -2595,7 +2599,11 @@ function verWords(c){
 // the searches for one card: year + set + player (+ version word), or, when that found no price, other words
 function qItem(c){
   if(c.priceAlt===1) return [c.id, ...q130alt(c)];
-  const v = verWords(c), q = q130(c, true); return v ? [c.id, (q+" "+v).replace(/\s+/g," "), q] : [c.id, q];
+  const v = verWords(c), q = q130(c, true);
+  // sellers word titles differently: shorter searches find the sales a longer one misses (they run when the first finds under 3 sales)
+  const num = String(c.number||"").replace(/^#/,""), setw = q.replace(/^\d{4} /,"").replace(nrm(c.player),"").replace(c.player,"").trim();
+  const more = [/^nno$/i.test(num) || !num ? "" : `${c.player} ${num}`, `${c.player} ${setw} ${v}`, `${c.player} ${setw}`];
+  return [c.id, ...new Set([v ? q+" "+v : q, ...(v ? [q] : []), ...more].map(s=>s.replace(/\s+/g," ").trim()).filter(s=>s && s!==c.player))];
 }
 function q130alt(c){
   const setFull = nrm(c.set).replace(/\bpl\b/g,"premier league").split(" ").filter(w=>w && !/^\d/.test(w) && !/^(the|of|to|and|x)$/.test(w)).join(" ");
@@ -2647,6 +2655,7 @@ function globalPhrases(){
   return globalVers = [...s];
 }
 const blockedFor = c => ((sets.find(s=>s.id===c.setId)||{}).blockWords||[]).map(w=>nrm(w)).filter(Boolean);
+const allowedFor = c => ((sets.find(s=>s.id===c.setId)||{}).allowWords||[]).map(w=>nrm(w)).filter(Boolean);
 function versionPhrases(setId){
   const cat = setId && catalogs[setId]; if(!cat) return [];
   if(cat._vers) return cat._vers;
@@ -2681,8 +2690,11 @@ function hasPrintRun(t){
   return false;
 }
 function cardMatch(title, c, strict){
+  // why a sale is not this card (shown on the card), and the word to blame, if any
+  const NO = (r, w) => { cardMatch.rej = r; cardMatch.rejWord = w || ""; return -1; }; cardMatch.rej = ""; cardMatch.rejWord = "";
+  const AL = " " + allowedFor(c).join(" ") + " ";   // words you said are your card for this set
   const t = (" " + nrm(title) + " ").replace(/ wc /g, " wc world cup ").replace(/ usmnt /g, " usmnt united states ").replace(/ epl /g, " epl premier league ");
-  const last = nrm(c.player).split(" ").pop(); if(!last || !t.includes(last)) return -1;
+  const last = nrm(c.player).split(" ").pop(); if(!last || !t.includes(last)) return NO("player's name missing");
   const num = nrm(String(c.number||"")).replace(/^#/,"");
   let noNum = false;
   if(num && !new RegExp((strict ? "#" : "(?<![a-z0-9/])(?<!\\d{4} )#?") + reEsc(num) + "(?![a-z0-9/])").test(t)){
@@ -2693,7 +2705,7 @@ function cardMatch(title, c, strict){
     else {
     // the seller left the number out: fine only when the title names no other card number
     const tk = t.trim().split(" ");
-    if(tk.some((w,k)=>w.includes("#") || (/^[a-z]{0,3}\d{1,3}$/.test(w) && !/^\d{4}$/.test(tk[k-1]||"")))) return -1;
+    if(tk.some((w,k)=>w.includes("#") || (/^[a-z]{0,3}\d{1,3}$/.test(w) && !/^\d{4}$/.test(tk[k-1]||"")))) return NO("another card number in the title");
     noNum = num!=="nno";   // an NNO card has no number to name
     }
   }
@@ -2702,59 +2714,59 @@ function cardMatch(title, c, strict){
   const codeHit = !noNum && /[a-z]/.test(num) && /\d|-|[a-z]{2,}/.test(num) && num.length >= 3;
   const autoW = /\b(auto|autos|autograph|autographs|autographed|signed|signature|signatures)\b/.test(t);
   for(const w of wordSet(c.variant).split(" ")) if(w && !/^[\d\/]/.test(w) && !SET_STOP.has(w) && !parW.includes(w) && !t.includes(" "+w)
-    && !codeHit && !(/^(autographs?|signatures?)$/.test(w) && autoW)) return -1;
+    && !codeHit && !(/^(autographs?|signatures?)$/.test(w) && autoW)) return NO(`the word "${w}" of your version is missing`);
   const ys = String(c.year||"").match(/\d{2,4}/g) || [];
-  if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; const yy = String(y).slice(2); if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `,` ${y-1} ${yy} `,` ${y-1}/${yy} `,` ${y-1} ${y} `].some(k=>t.includes(k))) return -1; }   // "2026" cards are sold as "2025-26"
+  if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; const yy = String(y).slice(2); if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `,` ${y-1} ${yy} `,` ${y-1}/${yy} `,` ${y-1} ${y} `].some(k=>t.includes(k))) return NO("another year"); }   // "2026" cards are sold as "2025-26"
   const set = nrm(c.set).replace(/\bpl\b/g,"premier league");
-  for(const w of set.split(" ")) if(w && !/^\d/.test(w) && !SET_STOP.has(w) && !t.includes(" "+w+" ")) return -1;
+  for(const w of set.split(" ")) if(w && !/^\d/.test(w) && !SET_STOP.has(w) && !t.includes(" "+w+" ")) return NO(`the set word "${w}" is missing`);
   // a team set is sold as "... Team Set": a card of the same team from another product is not it
-  if(/\bteam set\b/.test(set) && !/\bteam ?(set|product)\b|\bnational team\b|\btopps fc\b/.test(t)) return -1;   // team sets: "Team Set", "Official National Team Product", "Topps FC"
+  if(/\bteam set\b/.test(set) && !/\bteam ?(set|product)\b|\bnational team\b|\btopps fc\b/.test(t)) return NO("not the team set");   // team sets: "Team Set", "Official National Team Product", "Topps FC"
   // SportsCardsPro shortens "Road to FIFA World Cup 26" to "Road to FIFA"
-  for(const k of ["premier league","world cup","champions"]) if(set.includes(k) && !t.includes(k) && !(k==="world cup" && /\broad to fifa\b/.test(t) && /\broad to fifa\b/.test(set))) return -1;
+  for(const k of ["premier league","world cup","champions"]) if(set.includes(k) && !t.includes(k) && !(k==="world cup" && /\broad to fifa\b/.test(t) && /\broad to fifa\b/.test(set))) return NO(`"${k}" is missing`);
   let par = nrm(c.parallel); if(par && set.includes("mosaic") && par.startsWith("mosaic ")) par = par.slice(7);
   if(strict){
     const br = (t.match(/\[([^\]]+)\]/)||[])[1] || "";
-    if(wordSet(br) !== wordSet(par)) return -1;
+    if(wordSet(br) !== wordSet(par)) return NO("another version");
   } else {
     for(const w of wordSet(par).split(" ")){ if(!w || (w==="refractor" && wordSet(par)!=="refractor")) continue;   // "Green Refractor" is sold as "Green /99"
       const need = (" "+set+" ").includes(" "+w+" ") ? 2 : 1;
-      if((t.match(new RegExp("(?<![a-z0-9])"+reEsc(w),"g"))||[]).length < need) return -1; }
+      if((t.match(new RegExp("(?<![a-z0-9])"+reEsc(w),"g"))||[]).length < need) return NO(`the version word "${w}" is missing`); }
     // "Holo" parallels are sold as "Holo Silver" / "Silver Holo"
-    if(par){ const mine = ` ${wordSet(par)} ${set} ${nrm(c.team)} ${/\bholo\b/.test(wordSet(par)) && /\bholo\b/.test(t) ? "silver" : ""} `;
-      for(const m of t.matchAll(new RegExp("\\b("+PAR_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return -1; }
+    if(par){ const mine = ` ${wordSet(par)} ${set} ${nrm(c.team)} ${AL} ${/\bholo\b/.test(wordSet(par)) && /\bholo\b/.test(t) ? "silver" : ""} `;
+      for(const m of t.matchAll(new RegExp("\\b("+PAR_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return NO(`another version: "${m[1]}"`, m[1]); }
     else {
       const tNoSet = set.split(" ").reduce((s,w)=> w ? s.replace(new RegExp(" "+reEsc(w)+" ","g")," ") : s, t);   // "Gold" in "Topps Gold" names the set, not a parallel
-      if(new RegExp("\\b("+PAR_WORDS+"|sp|ssp)\\b").test(tNoSet) && !/\b(optic|chrome)\b/.test(set)) return -1;
-      if(!set.includes("mosaic") && /\bmosaic\b/.test(t)) return -1;
+      const pm = tNoSet.match(new RegExp("\\b("+PAR_WORDS+"|sp|ssp)\\b")); if(pm && !AL.includes(" "+pm[1]+" ") && !/\b(optic|chrome)\b/.test(set)) return NO(`a parallel word: "${pm[1]}"`, pm[1]);
+      if(!set.includes("mosaic") && /\bmosaic\b/.test(t) && !AL.includes(" mosaic ")) return NO("a Mosaic card", "mosaic");
     }
     // "Prizm" after a Donruss/Optic/Select card's own product name is how sellers say "shiny" ("Optic Holo Silver Prizm")
-    const ownLine = ` ${set} ${nrm(c.variant)} ${nrm(c.parallel)} `, ownNamed = /\b(donruss|optic|select|mosaic)\b/.test(ownLine) && [...ownLine.matchAll(/\b(donruss|optic|select|mosaic)\b/g)].some(m=>t.includes(" "+m[1]+" "));
-    for(const m of t.matchAll(new RegExp("\\b("+OTHER_SETS+")\\b","g"))) if(!ownLine.includes(" "+m[1]+" ") && !(m[1]==="prizm" && ownNamed)) return -1;   // a different product line
+    const ownLine = ` ${set} ${nrm(c.variant)} ${nrm(c.parallel)} ${AL} `, ownNamed = /\b(donruss|optic|select|mosaic)\b/.test(ownLine) && [...ownLine.matchAll(/\b(donruss|optic|select|mosaic)\b/g)].some(m=>t.includes(" "+m[1]+" "));
+    for(const m of t.matchAll(new RegExp("\\b("+OTHER_SETS+")\\b","g"))) if(!ownLine.includes(" "+m[1]+" ") && !(m[1]==="prizm" && ownNamed)) return NO(`another product: "${m[1]}"`, m[1]);   // a different product line
     // every parallel and insert of the set's checklist (Big Apple, Lava, Mini-Diamonds…): only when this card is that version
-    { const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${nrm(c.team)} ${ownTags(c)} ${/\bholo\b/.test(nrm(c.parallel)) && /\bholo\b/.test(t) ? "silver holo silver silver holo silver prizm holo prizm" : ""} `;   // the team counts as known ("Red" in "Red Bull Salzburg")
-      for(const ph of versionPhrases(c.setId)) if(!own.includes(" "+ph+" ") && !(" "+set+" ").includes(" "+ph+" ") && t.includes(" "+ph+" ")) return -1;   // "Gold" of "Topps Gold" names the set
+    { const own = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${nrm(c.team)} ${ownTags(c)} ${AL} ${/\bholo\b/.test(nrm(c.parallel)) && /\bholo\b/.test(t) ? "silver holo silver silver holo silver prizm holo prizm" : ""} `;   // the team counts as known ("Red" in "Red Bull Salzburg")
+      for(const ph of versionPhrases(c.setId)) if(!own.includes(" "+ph+" ") && !(" "+set+" ").includes(" "+ph+" ") && t.includes(" "+ph+" ")) return NO(`another version: "${ph}"`, ph);   // "Gold" of "Topps Gold" names the set
       const cat0 = catalogs[c.setId]; const ownW = own + ` ${set} ${nrm(c.player)} ` + (!c.parallel && cat0 && cat0.parallels.some(p=>/^common\b/i.test(p.name)) ? " common yellow " : "");
-      for(const w of (catalogs[c.setId]||{})._words||[]) if(!ownW.includes(" "+w+" ") && t.includes(" "+w+" ")) return -1;
+      for(const w of (catalogs[c.setId]||{})._words||[]) if(!ownW.includes(" "+w+" ") && t.includes(" "+w+" ")) return NO(`another version: "${w}"`, w);
       // versions named in any of your checklists ("Heat Vision", "Spectrum"…) and words you marked "not my card" for this set
       const pz = s => s.replace(/\bprizms\b/g,"prizm"), ownG = pz(ownW + ` ${nrm(c.set)} ${nrm(c.year)} `), tG = pz(t);
-      for(const ph of globalPhrases()) if(!ownG.includes(" "+ph+" ") && tG.includes(" "+ph+" ")) return -1;
-      for(const ph of blockedFor(c)) if(t.includes(" "+ph+" ")) return -1; }
+      for(const ph of globalPhrases()) if(!ownG.includes(" "+ph+" ") && tG.includes(" "+ph+" ")) return NO(`another version: "${ph}"`, ph);
+      for(const ph of blockedFor(c)) if(t.includes(" "+ph+" ")) return NO(`you marked "${ph}" as not your card`); }
     // rare versions sellers name (SSP, Plum Blossom, Diamond…): only when this card is that version
-    { const mine = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp short print var variation" : ""} ${c.serial || c.auto ? "sp" : ""} ${set} ${nrm(c.team)} ${/\battax\b/.test(set) ? "diamond" : ""} `;   // Turbo/Match Attax: "Diamond" cards are base cards
-      for(const m of t.matchAll(new RegExp("\\b("+RARE_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return -1; }
-    if(/\b(lot|lots|you pick|u pick|choose|complete set|pick your|break|box)\b/.test(t)) return -1;
-    if(!c.auto && /\b(auto|autograph|signed)\b/.test(t)) return -1;
-    if(!c.serial && hasPrintRun(t)) return -1;
-    if(/\b(psa|bgs|sgc|cgc|mgc|beckett|graded|gem mint)\b/.test(t)) return -1;
+    { const mine = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${AL} ${/variation/i.test(ownSub(c)) ? "sp ssp short print var variation" : ""} ${c.serial || c.auto ? "sp" : ""} ${set} ${nrm(c.team)} ${/\battax\b/.test(set) ? "diamond" : ""} `;   // Turbo/Match Attax: "Diamond" cards are base cards
+      for(const m of t.matchAll(new RegExp("\\b("+RARE_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return NO(`a rare version: "${m[1]}"`, m[1]); }
+    if(/\b(lot|lots|you pick|u pick|choose|complete set|pick your|break|box)\b/.test(t)) return NO("a lot, break or box");
+    if(!c.auto && /\b(auto|autograph|signed)\b/.test(t)) return NO("autographed");
+    if(!c.serial && hasPrintRun(t)) return NO("numbered");
+    if(/\b(psa|bgs|sgc|cgc|mgc|beckett|graded|gem mint)\b/.test(t)) return NO("graded");
   }
-  const known = new Set(nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp" : ""} ${c.auto ? "auto autos autograph autographed signed" : ""} ${c.serial || c.auto ? "sp" : ""} ${c.team} ${c.year} ${c.number} premier league`).split(" "));
+  const known = new Set(nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${/variation/i.test(ownSub(c)) ? "sp ssp" : ""} ${c.auto ? "auto autos autograph autographed signed" : ""} ${c.serial || c.auto ? "sp" : ""} ${c.team} ${c.year} ${c.number} premier league ${AL}`).split(" "));
   let extra = 0; const unknown = [];
   const knownTxt = " " + nrm(`${c.player} ${c.set} ${c.variant} ${c.parallel} ${ownSub(c)} ${c.team}`) + " ";
   const means = w => (WORD_MEANS[w]||[]).some(m => knownTxt.includes(" "+m+" "));
   for(const w of nrm(title).replace(/[\[\]#\/]/g," ").split(" ")) if(w && !/^\d+$/.test(w) && !known.has(w) && !SET_STOP.has(w) && !/^(prizms?|rc|rookie|fc|afc|cf|sc|ac|club|football|soccer|card|cards)$/.test(w) && !means(w)){ extra++; unknown.push(w); }
   cardMatch.info = {noNum, unknown};
   // without a number, an unexplained insert name ("Golden Moments") would be another card
-  if(noNum && extra>2) return -1;
+  if(noNum && extra>2) return NO("no card number, and words the app doesn't know: " + unknown.join(", "), unknown.join(" "));
   return extra + (noNum ? 1 : 0);
 }
 // the SportsCardsPro row for this card: needs a price ("price") or a photo ("photo")
@@ -2874,14 +2886,38 @@ function renderValueInfo(card){
     : (card.valueUrl ? `No price yet${card.valueLinkNote ? " · " + esc(card.valueLinkNote) : ""} · <a href="${esc(card.valueUrl)}" target="_blank" rel="noopener">${/sportscardspro/.test(card.valueUrl) ? "SportsCardsPro page" : "Source"} ↗</a>` : "No value yet. Use Update prices above the cards, or type one."))
     + (priceable(card) ? ` · <a href="#" id="updOne">↻ Update this price now</a>` : "");
   const sl = Number(card.value)>0 ? (card.valueSales||[]).filter(x=>x[2]) : [];
+  // the sales the last search saw but did not count, and why: one click takes one as your card's price
+  $("#valueInfo").innerHTML += rejHtml(card);
   if(sl.length) $("#valueInfo").innerHTML += `<details class="sales"><summary>${sl.length} sale${sl.length===1?"":"s"} used</summary>${sl.map(([d,v,u,t])=>`<a href="${esc(u)}" target="_blank" rel="noopener" title="${esc(t||"")}">${esc(d||"—")} · ${esc(fmtCur(toDisp(v), curCode()))}${t?" · "+esc(t):""} ↗</a>`).join("")}</details>`;
 }
 // one card, on demand: its saved SportsCardsPro page (or a search), else its 130point sales
 $("#valueInfo").addEventListener("click", e=>{
+  const ok = e.target.closest(".rsOk"); if(ok){ e.preventDefault(); return pickRejected(ok.dataset.id, +ok.dataset.i); }
   if(!e.target.closest("#updOne")) return; e.preventDefault();
   const c = editing && cards.find(x=>x.id===editing.id); if(!c) return;
   price130([c]);
 });
+const rejHtml = card => { const rs = !(Number(card.value)>0) && !viewing ? (card.rejSales||[]) : [];
+  return rs.length ? `<details class="sales rejs" open><summary>${rs.length} sale${rs.length===1?"":"s"} found but not counted</summary>${rs.map(([d,v,u,t,why],i)=>`<div class="rsRow"><a href="${esc(u)}" target="_blank" rel="noopener">${esc((d||"").split("-").reverse().join("/"))} · ${esc(fmtCur(toDisp(v), curCode()))} · ${esc(t||"")}</a><span class="rsWhy">${esc(why||"")}</span><button type="button" class="rsOk" data-id="${esc(card.id)}" data-i="${i}">This is my card</button></div>`).join("")}</details>` : ""; };
+async function pickRejected(id, i){
+  const c = cards.find(x=>x.id===id); if(!c) return;
+  const r = (c.rejSales||[])[i]; if(!r) return;
+  const [d, v, u, t, , word, pic] = r;
+  try{
+    await commit("cards", all=>all.map(x=> x.id!==c.id ? x : {...x, value: v, valueDate: isoDay(), valueSource: "eBay sold",
+      valueNote: `Ungraded · only 1 sale, ${String(d).split("-").reverse().join("/")} (130point) · picked by you`, valueUrl: u, valueSales: [[d, v, u, t, pic||""]],
+      okSales: [...new Set([...(x.okSales||[]), u].filter(Boolean))], rejSales: (x.rejSales||[]).filter((_,k)=>k!==i), priceTried: "", priceAlt: 0, review: null,
+      ...(!x.image && !x.photo && !x.noSalePic && pic ? {image: pic, imageSource: "Sale", replacePhoto: !!x.tcdbFile} : {})}));
+    // the word that blocked it now counts as this set's word (the next searches accept it for every card of the set)
+    const vp = versionPhrases(c.setId), ws = String(word||"").split(" ").filter(w=>w && w.length>1 && !vp.includes(w));   // a parallel of this set ("Gold") is never taught: only this one sale counts
+    if(ws.length && c.setId) await commit("sets", list=>list.map(s=>s.id!==c.setId ? s : {...s, allowWords:[...new Set([...(s.allowWords||[]), ...ws])], blockWords:(s.blockWords||[]).filter(b=>!ws.includes(nrm(b)))}));
+    toast("Price saved" + (ws.length ? ` · "${ws.join(" ")}" now counts as a word of this set` : ""));
+  }catch(err){ return toast("Couldn't save: " + err.message); }
+  const n = cards.find(x=>x.id===c.id);
+  if(n && editing && editing.id===n.id){ editing = n; renderValueInfo(n); }
+  if(n && cardOpen && cardOpen.id===n.id && !$("#cardDrawer").hidden) openCardPage(n);
+  render();
+}
 const sameUrl = (a,b) => String(a||"").replace(/[?#].*$/,"").replace(/\/+$/,"").replace(/^https?:\/\/(www\.)?/,"") === String(b||"").replace(/[?#].*$/,"").replace(/\/+$/,"").replace(/^https?:\/\/(www\.)?/,"");
 // where a card's value came from: the saved link, else a search for that card on the source site
 function priceLink(c){
@@ -2966,15 +3002,20 @@ function nearSale(title, c){
   return true;
 }
 function priceFromSales(c, sales, rates){
-  // the price is always the latest sale of exactly this version of the card (base, parallel or numbered)
-  const all = [], near = [];
+  // the price is the middle of the last (up to) 3 sales of exactly this version of the card (base, parallel or numbered)
+  const all = [], near = [], rej = [];
   for(const [title, price, curr, date, url, img] of sales||[]){
     const r = curr==="USD" || !curr ? 1 : Number(rates[curr]);
     if(!(price>0) || !(r>0) || !date || (c.badSales||[]).some(b=>sameUrl(b, url))) continue;
     const row = {usd: price/r, date: String(date).slice(0,10), url: ebayLink(url), title, img: img||""};
-    if(cardMatch(title, c, false) < 0){ if(nearSale(title, c)) near.push({...row, info:{}}); continue; }
+    // a sale you said is your card counts as is
+    if((c.okSales||[]).some(b=>sameUrl(b, url))){ all.push({...row, info:{}}); continue; }
+    if(cardMatch(title, c, false) < 0){ rej.push({...row, why: cardMatch.rej || "not this card", word: cardMatch.rejWord || ""}); if(nearSale(title, c)) near.push({...row, info:{}}); continue; }
     all.push({...row, info: cardMatch.info||{}});
   }
+  // the sales the search saw but did not count, newest first (shown on the card when it has no price)
+  rej.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const seenR = new Set(); priceFromSales.rejected = rej.filter(s=>{ const k = s.url || s.title; if(seenR.has(k)) return false; seenR.add(k); return true; }).slice(0, 8);
   // nothing exactly this version, but a sale that is almost it (same player, number and year, another version word):
   // it waits in "To check" for you to decide
   const nearOnly = !all.length && near.length > 0;
@@ -2982,24 +3023,27 @@ function priceFromSales(c, sales, rates){
   if(!all.length) return null;
   all.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   // a sale far from this card's other recent sales is usually a slab or a lot with a plain title
-  // (e.g. a PSA 10 listed as "Lionel Messi #135"): skip it and take the next latest sale
+  // (e.g. a PSA 10 listed as "Lionel Messi #135"): it is skipped
   const med = l => { const v = l.map(s=>s.usd).sort((p,q)=>p-q), m = v.length>>1; return v.length%2 ? v[m] : (v[m-1]+v[m])/2; };
-  let skipped = 0, x = null;
-  for(const s of all){
+  const okL = all.filter(s=>{
     // judged only against at least 3 other sales: with 1 or 2 a single cheap sale would push out the real price
     const others = all.filter(o=>o!==s).slice(0,10);
-    if(others.length>=3){ const m = med(others); if(s.usd > m*3 || s.usd < m/4){ skipped++; continue; } }
-    x = s; break;
-  }
-  if(!x){ x = all[0]; skipped = 0; }
-  const v = Math.round(x.usd*100)/100;
-  // reasons to let you check the match first
+    if(others.length>=3){ const m = med(others); if(s.usd > m*3 || s.usd < m/4) return false; }
+    return true;
+  });
+  const good = okL.length ? okL : [all[0]];
+  const x = good[0], skipped = all.indexOf(x);
+  // the last 3 sales within a year of the latest one (a close match alone counts as one sale)
+  const picks = nearOnly ? [x] : good.filter(s=>Date.parse(x.date) - Date.parse(s.date) <= 365*DAY).slice(0, 3);
+  const v = Math.round(med(picks)*100)/100, dd = d => d.split("-").reverse().join("/");
   const why = [];
   if(nearOnly) why.push("close match only: the title names a different version or product. Check it is your card");
   if(x.info.noNum) why.push("the title has no card number");
   if((x.info.unknown||[]).length>=2) why.push("words the app doesn't know: " + x.info.unknown.join(", "));
   const cands = all.filter(o=>o!==x).slice(0,4).map(o=>({date:o.date, value:Math.round(o.usd*100)/100, url:o.url, title:String(o.title||"").slice(0,150), img:o.img}));
-  return {value: v, note: `Ungraded · last sale, ${x.date.split("-").reverse().join("/")} (130point)` + (skipped ? ` · ${skipped} newer sale${skipped>1?"s":""} far from the usual price skipped` : ""), url: x.url, sales: [[x.date, v, x.url, String(x.title||"").slice(0,120), salePic(x.img)]],
+  const note = picks.length>1 ? `Ungraded · middle of the last ${picks.length} sales, latest ${dd(x.date)} (130point)` : `Ungraded · only 1 sale, ${dd(x.date)} (130point) · uncertain`;
+  return {value: v, note: note + (skipped ? ` · ${skipped} newer sale${skipped>1?"s":""} far from the usual price skipped` : ""), url: x.url,
+    sales: picks.map(s=>[s.date, Math.round(s.usd*100)/100, s.url, String(s.title||"").slice(0,120), salePic(s.img)]),
     img: x.img, title: String(x.title||"").slice(0,150), date: x.date, why, unknown: x.info.unknown||[], cands};
 }
 /* ---------- sold, traded or given away: the card leaves the collection, its history stays ---------- */
@@ -3133,7 +3177,7 @@ async function resplitBoxes(looked, force){
 async function applyPriceResults(site, results){
   await Promise.all([...new Set(Object.keys(results||{}).map(id=>(cards.find(x=>x.id===id)||{}).setId).filter(Boolean))].map(id=>loadCatalog(id).catch(()=>null)));
   if(site==="130point") await loadAllCatalogs();   // every checklist's version names count
-  const day = isoDay(), upd = new Map(), review = new Map(), miss = new Set(), keep = new Set(), links = new Map(), photoWant = new Map(), noPic = new Set(), pics = new Map(), rates = site==="130point" ? await usdRates() : null;
+  const day = isoDay(), rejSeen = new Map(), upd = new Map(), review = new Map(), miss = new Set(), keep = new Set(), links = new Map(), photoWant = new Map(), noPic = new Set(), pics = new Map(), rates = site==="130point" ? await usdRates() : null;
   for(const [id, rows] of Object.entries(results||{})){
     const c = cards.find(x=>x.id===id); if(!c || rows===null) continue;
     if(site==="scp"){
@@ -3147,15 +3191,20 @@ async function applyPriceResults(site, results){
     } else {
       if(keepManual() && c.valueSource==="Manual"){ keep.add(id); if(false){ const u = bestSalePhoto(c, rows); if(u) photoWant.set(id, u); else noPic.add(id); } continue; }
       let p = priceFromSales(c, rows, rates);
-      // the eBay listing's own details (Autographed, Print Run, Graded…) rule out a sale its title hides
-      const dropped = new Set(); let tries = 0;
-      while(p && tries<3){
-        const sp = await ebaySpecs(p.url); if(!sp) break;
-        const pr = specsProblem(c, sp);
-        if(pr.hard){ dropped.add(p.url); p = priceFromSales(c, rows.filter(r=>!dropped.has(ebayLink(r[4]))), rates); tries++; continue; }
-        if(pr.soft) p.why.push(pr.soft);
-        break;
+      // the eBay listing's own details (Autographed, Print Run, Graded…) rule out a sale its title hides: each sale used is checked
+      const dropped = new Set(), checked = new Set(), hardRej = []; let tries = 0;
+      while(p && tries<4){
+        let hard = null;
+        for(const s of p.sales){ const u = s[2]; if(!u || checked.has(u)) continue; checked.add(u);
+          const sp = await ebaySpecs(u); if(!sp) continue;
+          const pr = specsProblem(c, sp);
+          if(pr.hard){ hard = {s, why: pr.hard}; break; }
+          if(pr.soft && u===p.url) p.why.push(pr.soft); }
+        if(!hard) break;
+        dropped.add(hard.s[2]); hardRej.push({date: hard.s[0], usd: hard.s[1], url: hard.s[2], title: hard.s[3], img: hard.s[4], why: "its eBay page says " + hard.why, word: ""});
+        p = priceFromSales(c, rows.filter(r=>!dropped.has(ebayLink(r[4]))), rates); tries++;
       }
+      if(!p) rejSeen.set(id, [...hardRej, ...(priceFromSales.rejected||[])].slice(0, 8).map(s=>[s.date, Math.round(s.usd*100)/100, s.url||"", String(s.title||"").slice(0,120), s.why, s.word, salePic(s.img)]));
       if(p && tries>=3) p.why.push("its newer sales were graded, autographed or numbered");
       if(p){ const u = setUsual(c); if(u && p.value > u*4 && p.value-u > 3) p.why.push(`${money(p.value)} is far above the usual ${money(u)} for this version in the set`); }
       if(p && p.why.length) review.set(id, p);
@@ -3171,13 +3220,13 @@ async function applyPriceResults(site, results){
   const withPic = c => pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
   await commit("cards", all=>all.map(withPic).map(c=> upd.has(c.id)
-    ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null,
+    ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null, rejSales: [],
        ...(site==="130point" && !c.image && !c.photo && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : {})}
     : review.has(c.id) ? {...c, priceTried: day, priceAlt:0, review: reviewOf(review.get(c.id))}
     // not found: the next search uses other words; only when that also finds nothing is the card left for a week
-    : site==="130point" && miss.has(c.id) && c.priceAlt!==1 ? {...c, priceAlt:1, priceTried:""}
+    : site==="130point" && miss.has(c.id) && c.priceAlt!==1 ? {...c, priceAlt:1, priceTried:"", rejSales: rejSeen.get(c.id) || []}
     // no eBay sale of this exact card: no price (rather than a guess); typed prices are never touched
-    : site==="130point" && miss.has(c.id) ? (c.valueSource==="Manual" ? {...c, priceTried: day, priceAlt:0} : {...c, value: "", valueDate: "", valueSource: "", valueNote: "No eBay sales of this card on 130point", valueSales: [], valueUrl: "", priceTried: day, priceAlt:0})
+    : site==="130point" && miss.has(c.id) ? (c.valueSource==="Manual" ? {...c, priceTried: day, priceAlt:0} : {...c, rejSales: [...(rejSeen.get(c.id) || []), ...(c.rejSales||[]).filter(r=>!(rejSeen.get(c.id)||[]).some(q=>q[2]===r[2] && q[3]===r[3]))].slice(0, 8), value: "", valueDate: "", valueSource: "", valueNote: "No eBay sales of this card on 130point", valueSales: [], valueUrl: "", priceTried: day, priceAlt:0})
     : keep.has(c.id) ? {...c, priceTried: day}
     : links.has(c.id) ? {...c, valueUrl: links.get(c.id), valueLinkNote: "On SportsCardsPro, no ungraded price yet"} : c));
   // a search that got no answer (null) stays on the list, to be tried again
@@ -4088,7 +4137,7 @@ function openCardPage(c){
     <div>${img?`<img class="big" src="${esc(img)}" alt="">`:`<div class="noimg">No photo yet</div>`}</div>
     <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
       <div><div class="vbig">${Number(c.value)>0?money(c.value):"No price"}</div><small class="hint">${esc(c.valueNote||"")}${c.valueUrl?` · <a href="${esc(c.valueUrl)}" target="_blank" rel="noopener">the sale</a>`:""}</small>
-        ${sparkSVG(hist)}${hist.length>1?`<small class="hint">${hist.length} prices since ${fmtD(hist[0].d)}: ${hist.slice(-5).map(x=>money(x.v)).join(" → ")}</small>`:""}</div>
+        ${sparkSVG(hist)}${hist.length>1?`<small class="hint">${hist.length} prices since ${fmtD(hist[0].d)}: ${hist.slice(-5).map(x=>money(x.v)).join(" → ")}</small>`:""}${rejHtml(c)}</div>
       <dl>
         ${row("Set", esc([c.year, c.set].filter(Boolean).join(" ")))}
         ${row("Version", esc(c.variant || "Base"))}
@@ -4112,6 +4161,7 @@ function openCardPage(c){
   $("#scrim").hidden = $("#cardDrawer").hidden = false;
 }
 $("#cdClose").onclick = closeDrawers;
+$("#cdBody").addEventListener("click", e=>{ const ok = e.target.closest(".rsOk"); if(ok){ e.preventDefault(); pickRejected(ok.dataset.id, +ok.dataset.i); } });
 $("#cdActs").onclick = async e=>{
   const c = cardOpen; if(!c) return;
   if(e.target.id==="cdEdit"){ closeDrawers(); openDrawer(myCards.find(x=>x.id===c.id) || allCards.find(x=>x.id===c.id)); }
