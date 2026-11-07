@@ -428,6 +428,11 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 
 body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,body.noprice #sGainW,body.ro .vbadge,body.ro .val,body.ro .pl-row,body.ro .spark,body.ro #sGainW{display:none!important}
 #eyeBtn{white-space:nowrap}
+.scpC{display:flex;flex-direction:column;gap:8px;margin:6px 0}
+.scpO{display:flex;gap:10px;align-items:flex-start}
+.scpO img,.scpO .noimg{width:64px;min-width:64px;height:88px;object-fit:contain;border-radius:6px;background:#f2f2f5;font-size:11px;display:flex;align-items:center;justify-content:center}
+.scpO div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.scpO .btn{align-self:flex-start;padding:4px 12px;font-size:13px}
 .rejs .rsRow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:6px 0;border-top:1px solid #0001}
 .rejs .rsRow a{flex:1 1 100%}
 .rejs .rsWhy{flex:1;color:#b45309;font-size:12px}
@@ -556,15 +561,16 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   </section>
   <section class="pend" id="priceBar" hidden aria-label="Prices">
     <div class="pend-top"><b id="priceCount"></b><small id="priceInfo" class="note"></small>
-      <span class="pbtns"><button type="button" class="btn" id="updPrices" title="Opens 130point: one search per card reads its recent eBay sales for the price (photos come only from TCDB or from you)">Search 130point</button>
+      <span class="pbtns"><button type="button" class="btn" id="updPrices" title="Opens SportsCardsPro: each card's own page gives its ungraded price">SportsCardsPro</button>
       <button type="button" class="btn ghost" id="revBtn" hidden title="Sales the app was not sure were your card: compare the photos and decide">To check</button>
-      <button type="button" class="btn" id="get130" hidden title="Opens 130point for the cards SportsCardsPro does not have">130point</button></span></div>
+      <button type="button" class="btn" id="get130" hidden title="Opens 130point (eBay sales) for the cards SportsCardsPro does not have">130point</button></span></div>
     <details id="priceHelp">
       <summary title="How it works">?</summary>
       <ol>
         <li>One time only: drag this button to your Chrome bookmarks bar → <a class="bm" id="bmFind" href="#">Card Vault search</a> (if you have an older "Card Vault prices" bookmark, delete it; keep "Card Vault photos", it is for TCDB).</li>
-        <li>Click <b>Search 130point</b>. A 130point page opens: click the <b>Card Vault search</b> bookmark there and keep the tab open until it says done. Each card is searched by its name and set; when that finds fewer than 3 sales, shorter searches (player + number, player + set) run too. The price is the <b>middle of the last 3 sales</b> of exactly your version of the card (same base, parallel or numbered version, ungraded, no autos unless yours is one); with only 1 sale it is marked uncertain; with no sale of that version, no price. A card with no price lists the sales the search saw and why each was not counted: <b>This is my card</b> takes one as its price.</li>
-        <li>If a run stops before the end (130point not answering, or its daily limit), click <b>Search 130point</b> again later: it continues with the cards that were not reached.</li>
+        <li>Click <b>SportsCardsPro</b>. A SportsCardsPro page opens: click the <b>Card Vault search</b> bookmark there and keep the tab open until it says done. Each card is linked once to its own SportsCardsPro page (an exact match is linked by itself; when several pages could be your card, they wait in <b>To check</b> for you to pick one), and its ungraded price is read from that page every time. Wrong page? Open the card and click <b>Wrong SportsCardsPro page</b>.</li>
+        <li>Cards SportsCardsPro does not have (or with no ungraded price there) go to <b>130point</b>: click it, then the same bookmark on the 130point page. Each card is searched by its name and set; when that finds fewer than 3 sales, shorter searches (player + number, player + set) run too. The price is the <b>middle of the last 3 sales</b> of exactly your version of the card (same base, parallel or numbered version, ungraded, no autos unless yours is one); with only 1 sale it is marked uncertain; with no sale of that version, no price. A card with no price lists the sales the search saw and why each was not counted: <b>This is my card</b> takes one as its price.</li>
+        <li>If a run stops before the end (130point not answering, or its daily limit), click <b>130point</b> again later: it continues with the cards that were not reached.</li>
         <li>Prices you typed yourself are also updated when 130point finds sales of the card; if it finds none, your price stays. Cards updated in the last 7 days are skipped.</li>
       </ol>
       <p class="hint" style="padding:0 14px 12px 32px;display:flex;flex-direction:column;gap:6px"><label class="check" style="text-transform:none;letter-spacing:0;color:var(--ink)"><input type="checkbox" id="keepManual"> Keep the prices I typed myself (130point won't change them)</label>
@@ -668,7 +674,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
     <p class="hint full" id="boxInfo" data-show="box"></p>
     <label data-show="full"><span id="valueL">Est. value (USD)</span><input id="f_value" name="value" type="number" min="0" step="0.01" placeholder="—"></label>
     <p class="hint" id="valueInfo" data-show="full"></p>
-    <label class="full" data-show="full">Price source link<input id="f_valueUrl" name="valueUrl" type="url" placeholder="Filled in by Search 130point, or paste a sale link"></label>
+    <label class="full" data-show="full">Price source link<input id="f_valueUrl" name="valueUrl" type="url" placeholder="Filled in by the price update, or paste a SportsCardsPro page or a sale link"></label>
     <label class="full" data-show="full">TCDB link<input id="f_url" name="url" type="url" placeholder="https://www.tcdb.com/…"></label>
     <div class="full imgpick" data-show="set quick full">
       <div class="imgpick-h"><span class="lbl">Photo</span><button type="button" class="danger" id="imgClear" hidden>Remove photo</button></div>
@@ -796,7 +802,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   <button type="button" class="btn ghost" id="selAll">All shown</button>
   <button type="button" class="btn ghost" id="selClear">Clear</button>
   <button type="button" class="btn ghost" id="selDone">Done</button>
-  <button type="button" class="btn ghost" id="selPrice" title="Look up the selected cards' prices on 130point now, even if they were updated recently">Search 130point</button>
+  <button type="button" class="btn ghost" id="selPrice" title="Look up the selected cards' prices now (SportsCardsPro, then 130point), even if they were updated recently">Update prices</button>
   <button type="button" class="btn" id="selEdit">Edit</button>
 </div>
 <aside class="drawer" id="cardDrawer" hidden aria-labelledby="cdTitle" role="dialog">
@@ -1313,7 +1319,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794014702";
+const BUILD = "1794015588";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2304,6 +2310,8 @@ async function save(e){
     if(raw !== (f.value.dataset.orig ?? "")){
       Object.assign(data, {value:nv, valueDate: nv==="" ? "" : new Date().toISOString().slice(0,10), valueSource: nv==="" ? "" : "Manual", valueNote:"", valueSales:[], valueUrl: nv==="" ? "" : f.valueUrl.value.trim()});
     } else if(f.valueUrl.value.trim() !== (f.valueUrl.dataset.orig ?? "")) data.valueUrl = f.valueUrl.value.trim();
+    // a SportsCardsPro page typed in the link field becomes the card's price page
+    if(/sportscardspro\.com\/game\//.test(data.valueUrl||"") && f.valueUrl.value.trim() !== (f.valueUrl.dataset.orig ?? "")){ data.scpUrl = data.valueUrl; data.scpReview = null; }
   }
   data.photo = editing?.photo || ""; data.photoV = editing?.photoV || "";
   data.image = chosenImage===TCDB ? "" : chosenImage;
@@ -2895,7 +2903,7 @@ $("#valueInfo").addEventListener("click", e=>{
   const ok = e.target.closest(".rsOk"); if(ok){ e.preventDefault(); return pickRejected(ok.dataset.id, +ok.dataset.i); }
   if(!e.target.closest("#updOne")) return; e.preventDefault();
   const c = editing && cards.find(x=>x.id===editing.id); if(!c) return;
-  price130([c]);
+  priceSmart([c]);
 });
 const rejHtml = card => { const rs = !(Number(card.value)>0) && !viewing ? (card.rejSales||[]) : [];
   return rs.length ? `<details class="sales rejs" open><summary>${rs.length} sale${rs.length===1?"":"s"} found but not counted</summary>${rs.map(([d,v,u,t,why],i)=>`<div class="rsRow"><a href="${esc(u)}" target="_blank" rel="noopener">${esc((d||"").split("-").reverse().join("/"))} · ${esc(fmtCur(toDisp(v), curCode()))} · ${esc(t||"")}</a><span class="rsWhy">${esc(why||"")}</span><button type="button" class="rsOk" data-id="${esc(card.id)}" data-i="${i}">This is my card</button></div>`).join("")}</details>` : ""; };
@@ -2930,23 +2938,41 @@ function priceLink(c){
 const priceable = c => c.status!=="pending" && c.player && c.number && !c.grade;
 const recent = d => d && Date.now()-Date.parse(d) < PRICE_DAYS*DAY;
 const needsLink = c => /^(SportsCardsPro|eBay sold)$/.test(c.valueSource||"") && Number(c.value)>0 && !c.valueUrl;   // priced before links were saved
-const stalePrice = c => priceable(c) && (!(Number(c.value)>0 && recent(c.valueDate)) || c.valueSource==="SportsCardsPro" || needsLink(c)) && !recent(c.priceTried);
+const stalePrice = c => priceable(c) && (!(Number(c.value)>0 && recent(c.valueDate)) || (needsLink(c) && c.valueSource!=="SportsCardsPro")) && !recent(c.priceTried);
 let pricing = false;
 function renderPriceBar(){
   if(pricing) return;
   const ids = new Set(cards.map(c=>c.id));
   // one button: cards whose price is old plus cards a stopped 130point run did not reach
-  const n = toPrice().length;
-  const rv = myCards.filter(c=>c.review).length;
+  const n = toPrice().length, sN = scpNeed().length, pN = need130().length;
+  const rv = myCards.filter(c=>c.review || c.scpReview).length;
   $("#revBtn").hidden = !rv; $("#revBtn").textContent = `${rv} to check`;
   $("#priceBar").hidden = !n && !rv;
-  $("#updPrices").hidden = !n; $("#updPrices").textContent = n > RUN_MAX ? `Search 130point (next ${RUN_MAX})` : "Search 130point"; $("#get130").hidden = true;
+  // SportsCardsPro first (each card's own page); 130point only for the cards it does not have
+  $("#updPrices").hidden = !sN; $("#updPrices").textContent = `SportsCardsPro (${Math.min(sN, SCP_MAX)})`;
+  $("#get130").hidden = !pN; $("#get130").textContent = `130point (${Math.min(pN, RUN_MAX)})`;
   { const L = toPrice(), ph = L.filter(needPhoto).length, pr = L.filter(c=>stalePrice(c) || lsList("cv-130list").includes(c.id)).length;
     $("#priceCount").textContent = [pr ? `${pr} need a price update` : "", ph ? `${ph} need a photo` : ""].filter(Boolean).join(" · "); }
   $("#priceInfo").textContent = "";
 }
-// prices come only from 130point (eBay sold listings of this exact card): SportsCardsPro often matched a
-// parallel or a numbered version instead of the base card
+// prices: SportsCardsPro first, from each card's own page (linked once: an exact match, or the page you pick in "To check");
+// cards SportsCardsPro does not have (or with no ungraded price there) use 130point's eBay sales
+const SCP_RETRY = 30, SCP_MAX = 200;
+const scpCan = c => !!c.scpUrl || (!c.scpReview && !(c.scpNone && Date.now()-Date.parse(c.scpNone) < SCP_RETRY*DAY));
+const scpNeed = () => { const w = new Set(lsList("cv-130list")); return toPrice().filter(c=>scpCan(c) && !w.has(c.id) && !needPhoto(c)); };
+const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scpNeed()); return toPrice().filter(c=>!s.has(c) && !c.scpReview && (w.has(c.id) || !scpCan(c))); };
+function priceScp(list){
+  if(!list.length) return;
+  LS.set("cv-findPrice", JSON.stringify(list.map(c=>c.id)));
+  openFind("scp", "price", list.map(c=>[c.id, ...(c.scpUrl ? [c.scpUrl] : scpQueries(c))]));
+  $("#priceHelp").open = true; renderPriceBar();
+}
+// any set of cards: SportsCardsPro for those it can price, the rest wait for 130point (its button shows them)
+function priceSmart(list){
+  const w = new Set(lsList("cv-130list")), s = list.filter(c=>scpCan(c) && !w.has(c.id)), r = list.filter(c=>!s.includes(c) && !c.scpReview);
+  if(s.length){ if(r.length) LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), ...r.map(c=>c.id)])])); priceScp(s); }
+  else price130(r);
+}
 function price130(list){
   if(!list.length) return;
   LS.set("cv-findPrice", null);
@@ -2963,17 +2989,10 @@ const RUN_MAX = 100;
 const byPriority = (a,b) => ((b.priceAlt===1) - (a.priceAlt===1)) || ((Number(a.value)>0) - (Number(b.value)>0)) || (Number(b.value)||0) - (Number(a.value)||0);
 // a card with no photo (and no TCDB photo on the way) gets the photo of its sale in the same 130point search
 const needPhoto = c => false;   // photos come from TCDB, not from sales
-$("#updPrices").onclick = ()=>{ const list = toPrice().sort(byPriority).slice(0, RUN_MAX); if(list.length) price130(list); };
+$("#updPrices").onclick = ()=>{ const list = scpNeed().sort(byPriority).slice(0, SCP_MAX); if(list.length) priceScp(list); };
 $("#keepManual").checked = keepManual();
 $("#keepManual").onchange = e=>{ LS.set("cv-keepManual", e.target.checked ? "1" : null); renderPriceBar(); };
-$("#get130").onclick = ()=>{
-  const ids = new Set(lsList("cv-130list"));
-  const list = cards.filter(c=>ids.has(c.id));
-  if(!list.length){ LS.set("cv-130list", null); renderPriceBar(); return; }
-  // with the version's word first; if that finds nothing, the same search without it
-  openFind("130point", "price", list.map(qItem));
-  $("#priceHelp").open = true;
-};
+$("#get130").onclick = ()=>{ const list = need130().sort(byPriority).slice(0, RUN_MAX); if(list.length) price130(list); };
 let fxAll = null;
 async function usdRates(){
   if(fxAll) return fxAll;
@@ -3177,17 +3196,25 @@ async function resplitBoxes(looked, force){
 async function applyPriceResults(site, results){
   await Promise.all([...new Set(Object.keys(results||{}).map(id=>(cards.find(x=>x.id===id)||{}).setId).filter(Boolean))].map(id=>loadCatalog(id).catch(()=>null)));
   if(site==="130point") await loadAllCatalogs();   // every checklist's version names count
-  const day = isoDay(), rejSeen = new Map(), upd = new Map(), review = new Map(), miss = new Set(), keep = new Set(), links = new Map(), photoWant = new Map(), noPic = new Set(), pics = new Map(), rates = site==="130point" ? await usdRates() : null;
+  const day = isoDay(), scpLink = new Map(), scpRev = new Map(), scpNone = new Set(), rejSeen = new Map(), upd = new Map(), review = new Map(), miss = new Set(), keep = new Set(), links = new Map(), photoWant = new Map(), noPic = new Set(), pics = new Map(), rates = site==="130point" ? await usdRates() : null;
   for(const [id, rows] of Object.entries(results||{})){
     const c = cards.find(x=>x.id===id); if(!c || rows===null) continue;
     if(site==="scp"){
-      // the card's own saved page is trusted as is; otherwise the closest matching search row
-      const own = c.valueUrl && (rows||[]).find(r=>r[1]>0 && sameUrl(r[3], c.valueUrl));
-      const b = own ? {price: own[1], url: own[3]} : bestScpRow(c, rows, "price");
-      if(b) upd.set(id, {value: Math.round(b.price*100)/100, src:"SportsCardsPro", note:"Ungraded · SportsCardsPro", url: b.url||""});
-      // the card is on SportsCardsPro but has no ungraded price yet: keep its page link anyway
-      if(!b){ const l = bestScpRow(c, rows, "link"); if(l && l.url && !(Number(c.value)>0 && c.valueUrl)) links.set(id, l.url); }
-      if(!b){ if(needsLink(c) && c.valueSource==="SportsCardsPro" && recent(c.valueDate)) keep.add(id); else miss.add(id); }
+      // the card's own SportsCardsPro page (linked once): its ungraded price, every time
+      if(c.scpUrl){
+        const r0 = (rows||[]).find(r=>sameUrl(r[3], c.scpUrl)) || ((rows||[]).length===1 ? rows[0] : null);
+        if(r0 && r0[1]>0) upd.set(id, {value: Math.round(r0[1]*100)/100, src:"SportsCardsPro", note:"Ungraded · SportsCardsPro", url: c.scpUrl});
+        else miss.add(id);   // the page has no ungraded price yet: 130point
+      } else {
+        // no page yet: one exact match is linked; several possible pages wait in "To check" for you to pick; none: 130point
+        const bad = c.scpBad||[], ok = (rows||[]).filter(r=>r[3] && !bad.some(b=>sameUrl(b, r[3])));
+        const exact = ok.filter(r=>cardMatch(r[0], c, true)===0);
+        const last = nrm(c.player).split(" ").pop(), num = nrm(String(c.number||"")).replace(/^#/,"");
+        const maybe = ok.filter(r=>{ const t = " "+nrm(r[0])+" "; return last && t.includes(" "+last+" ") && (!num || num==="nno" || t.includes("#"+num+" ") || t.includes(" "+num+" ")); });
+        if(exact.length===1){ scpLink.set(id, exact[0][3]); if(exact[0][1]>0) upd.set(id, {value: Math.round(exact[0][1]*100)/100, src:"SportsCardsPro", note:"Ungraded · SportsCardsPro", url: exact[0][3]}); else miss.add(id); }
+        else if(maybe.length){ scpRev.set(id, maybe.slice(0, 6).map(r=>[String(r[0]).slice(0,150), r[1], r[2], r[3]])); }
+        else { scpNone.add(id); miss.add(id); }
+      }
     } else {
       if(keepManual() && c.valueSource==="Manual"){ keep.add(id); if(false){ const u = bestSalePhoto(c, rows); if(u) photoWant.set(id, u); else noPic.add(id); } continue; }
       let p = priceFromSales(c, rows, rates);
@@ -3219,7 +3246,10 @@ async function applyPriceResults(site, results){
   const photoNow = new Date().toISOString();
   const withPic = c => pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
-  await commit("cards", all=>all.map(withPic).map(c=> upd.has(c.id)
+  const scpF = c => scpLink.has(c.id) ? {...c, scpUrl: scpLink.get(c.id), scpReview: null}
+    : scpRev.has(c.id) ? {...c, scpReview: {cands: scpRev.get(c.id), at: day}}
+    : scpNone.has(c.id) ? {...c, scpNone: day} : c;
+  await commit("cards", all=>all.map(withPic).map(scpF).map(c=> upd.has(c.id)
     ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null, rejSales: [],
        ...(site==="130point" && !c.image && !c.photo && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : {})}
     : review.has(c.id) ? {...c, priceTried: day, priceAlt:0, review: reviewOf(review.get(c.id))}
@@ -3234,7 +3264,7 @@ async function applyPriceResults(site, results){
   if(site==="scp"){
     LS.set("cv-findPrice", JSON.stringify(lsList("cv-findPrice").filter(id=>!done.has(id))));
     LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), ...miss])]));
-    toast(`${upd.size} price${upd.size===1?"":"s"} updated from SportsCardsPro` + (miss.size ? ` · ${miss.size} to look up on 130point` : ""));
+    toast(`${upd.size} price${upd.size===1?"":"s"} from SportsCardsPro` + (scpRev.size ? ` · ${scpRev.size} to check (pick the right page)` : "") + (miss.size ? ` · ${miss.size} not there: use 130point` : ""));
   } else {
     LS.set("cv-130list", JSON.stringify(lsList("cv-130list").filter(id=>!done.has(id))));
     toast(`${upd.size} price${upd.size===1?"":"s"} updated from 130point sales` + (review.size ? ` · ${review.size} to check` : "") + (pics.size ? ` · ${pics.size} photo${pics.size===1?"":"s"} added` : "") + (miss.size ? ` · ${miss.size} with no sales of that exact card` : ""));
@@ -3489,7 +3519,7 @@ $("#selPrice").onclick = ()=>{
   const list = myCards.filter(c=>selIds.has(c.id) && priceable(c));
   const skipped = selIds.size - list.length;
   if(!list.length) return toast("None of these can be priced automatically (graded or pending cards)");
-  price130(list);
+  priceSmart(list);
   if(skipped) setTimeout(()=>toast(`${skipped} skipped: graded or pending cards`), 2600);
 };
 $("#selBtn").onclick = ()=>{ selMode = !selMode; if(!selMode) selIds = new Set(); render(); renderSelBar(); };
@@ -4075,9 +4105,20 @@ function setUsual(c){
 }
 const reviewOf = p => ({date:p.date, value:p.value, url:p.url, title:p.title, img:p.img, why:p.why, unknown:p.unknown, cands:p.cands||[], note:p.note});
 let rvPick = {};
+const scpImg = id => id ? `https://storage.googleapis.com/images.pricecharting.com/${id}/240.jpg` : "";
 function renderReview(){
+  const sl = myCards.filter(c=>c.scpReview && !c.review);
+  // cards with several possible SportsCardsPro pages: you pick the one that is your card (it is kept for every later update)
+  const scpRows = sl.map(c=>{ const mine = cardImg(c);
+    return `<div class="rvrow" data-scp="${esc(c.id)}">
+      <div class="rvimgs"><figure>${mine?`<img src="${esc(mine)}" alt="">`:`<span class="noimg">No photo yet</span>`}<figcaption>Your card</figcaption></figure></div>
+      <div class="rvinfo"><b>${esc(nameOf(c))} #${esc(c.number||"")}</b><span>${esc([c.year, c.set, c.variant||"Base"].filter(Boolean).join(" · "))}</span>
+        <span class="rvwhy">Which SportsCardsPro page is your card? It is used for every price update after this.</span>
+        <div class="scpC">${c.scpReview.cands.map(([t,v,im,u],i)=>`<div class="scpO">${im?`<img src="${esc(scpImg(im))}" alt="" referrerpolicy="no-referrer">`:`<span class="noimg">No photo</span>`}<div><a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a><span>${v>0?money(v):"no ungraded price"}</span><button type="button" class="btn" data-scpok="${i}">This one</button></div></div>`).join("")}</div>
+        <div class="rvbtns"><button type="button" class="btn ghost" data-scpno>None of these: use 130point</button></div>
+      </div></div>`; }).join("");
   const list = myCards.filter(c=>c.review);
-  $("#rvList").innerHTML = list.length ? list.map(c=>{ const r = c.review, mine = cardImg(c), pick = rvPick[c.id] || new Set();
+  $("#rvList").innerHTML = scpRows + (list.length || scpRows ? "" : `<p class="hint">Nothing to check right now.</p>`) + (!list.length ? "" : list.map(c=>{ const r = c.review, mine = cardImg(c), pick = rvPick[c.id] || new Set();
     return `<div class="rvrow" data-rv="${esc(c.id)}">
       <div class="rvimgs"><figure>${mine?`<img src="${esc(mine)}" alt="">`:`<span class="noimg">No photo yet</span>`}<figcaption>Your card</figcaption></figure>
         <figure>${r.img?`<img src="${esc(r.img)}" alt="" referrerpolicy="no-referrer">`:`<span class="noimg">Sale has no photo</span>`}<figcaption>The sale</figcaption></figure></div>
@@ -4087,13 +4128,27 @@ function renderReview(){
         <span class="rvwhy">Not sure because ${esc((r.why||[]).join(" · "))}</span>
         ${(r.unknown||[]).length ? `<div class="rvwords">If it's another version, which word shows it? ${r.unknown.map(w=>`<button type="button" class="chip" data-w="${esc(w)}" aria-pressed="${pick.has(w)}">${esc(w)}</button>`).join("")}</div>` : ""}
         <div class="rvbtns"><button type="button" class="btn" data-ok>✓ Same card</button><button type="button" class="btn ghost" data-no>✗ Not my card</button></div>
-      </div></div>`; }).join("")
-    : `<p class="hint">Nothing to check right now.</p>`;
+      </div></div>`; }).join(""));
 }
 function openReview(){ rvPick = {}; renderReview(); $("#scrim").hidden = $("#revDrawer").hidden = false; }
 $("#revBtn").onclick = openReview;
 $("#rvClose").onclick = closeDrawers;
 $("#rvList").onclick = async e=>{
+  const sr = e.target.closest("[data-scp]");
+  if(sr){ const id = sr.dataset.scp, c = myCards.find(x=>x.id===id); if(!c || !c.scpReview) return;
+    const okB = e.target.closest("[data-scpok]"), day = isoDay();
+    try{
+      if(okB){ const [t, v, im, u] = c.scpReview.cands[+okB.dataset.scpok];
+        await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, scpUrl: u, scpReview: null, ...(v>0 ? {value: Math.round(v*100)/100, valueDate: day, valueSource: "SportsCardsPro", valueNote: "Ungraded · SportsCardsPro", valueUrl: u, valueSales: [], priceTried: "", priceAlt: 0, review: null, rejSales: []} : {})}));
+        if(!(v>0)) LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), id])]));
+        toast(v>0 ? `${nameOf(c)}: ${money(v)} from SportsCardsPro` : `${nameOf(c)}: page saved · no ungraded price there yet, so 130point is used`);
+      } else if(e.target.closest("[data-scpno]")){
+        await commit("cards", all=>all.map(x=>x.id!==id ? x : {...x, scpReview: null, scpNone: day, scpBad: [...new Set([...(x.scpBad||[]), ...c.scpReview.cands.map(r=>r[3])])].slice(-20)}));
+        LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), id])]));
+        toast(`${nameOf(c)}: 130point will be used`);
+      } else return;
+    }catch(err){ return toast("Couldn't save: " + err.message); }
+    renderReview(); renderPriceBar(); return; }
   const row = e.target.closest("[data-rv]"); if(!row) return;
   const id = row.dataset.rv, c = myCards.find(x=>x.id===id); if(!c || !c.review) return;
   const w = e.target.closest("[data-w]");
@@ -4153,9 +4208,10 @@ function openCardPage(c){
       </dl>
     </div></div>`;
   $("#cdActs").innerHTML = viewing ? "" : `<button type="button" class="btn" id="cdEdit">Edit</button>
-    ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">Search 130point now</button>`:""}
+    ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">${scpCan(c) ? "Update price now" : "Search 130point now"}</button>`:""}
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
     <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
+    ${c.scpUrl ? `<button type="button" class="btn ghost" id="cdBadScp" title="This SportsCardsPro page is not your card: the link and its price are removed; the next update looks for the right page">Wrong SportsCardsPro page</button>` : ""}
     ${c.valueUrl && /ebay/i.test(c.valueSource||"") ? `<button type="button" class="btn ghost" id="cdBadSale" title="This sale is not your card: the price is removed and the next 130point search skips this sale">Wrong sale</button>` : ""}
     ${c.image||c.photo?`<button type="button" class="btn ghost" id="cdBadPic" title="Removes this photo from the card; TCDB's photo is not taken again. Add your own with Edit.">Wrong photo</button>`:""}`;
   $("#scrim").hidden = $("#cardDrawer").hidden = false;
@@ -4165,13 +4221,19 @@ $("#cdBody").addEventListener("click", e=>{ const ok = e.target.closest(".rsOk")
 $("#cdActs").onclick = async e=>{
   const c = cardOpen; if(!c) return;
   if(e.target.id==="cdEdit"){ closeDrawers(); openDrawer(myCards.find(x=>x.id===c.id) || allCards.find(x=>x.id===c.id)); }
-  else if(e.target.id==="cdPrice"){ closeDrawers(); price130([c]); }
+  else if(e.target.id==="cdPrice"){ closeDrawers(); scpCan(c) && !lsList("cv-130list").includes(c.id) ? priceScp([c]) : price130([c]); }
   else if(e.target.id==="cdCopies"){ closeDrawers(); openCopies(myCards.filter(x=>dupKey(x)===dupKey(c)).map(x=>x.id)); }
   else if(e.target.id==="cdGone"){ closeDrawers(); c.gone ? bringBack(c) : openGone(c); }
+  else if(e.target.id==="cdBadScp"){
+    try{ await commit("cards", all=>all.map(x=> x.id!==c.id ? x : {...x, scpBad:[...new Set([...(x.scpBad||[]), x.scpUrl])].slice(-20), scpUrl:"", scpNone:"",
+        ...(x.valueSource==="SportsCardsPro" ? {value:"", valueDate:"", valueSource:"", valueNote:"Wrong SportsCardsPro page removed", valueUrl:"", valueSales:[], priceTried:""} : {})}));
+      toast("Link removed. The next SportsCardsPro update looks for the right page."); openCardPage(myCards.find(x=>x.id===c.id)); renderPriceBar(); }
+    catch(err){ toast("Couldn't save: " + err.message); }
+  }
   else if(e.target.id==="cdBadSale"){
     const k = dupKey(c), bad = c.valueUrl;
     try{ await commit("cards", all=>all.map(x=> dupKey(x)===k && x.valueUrl && sameUrl(x.valueUrl, bad) ? {...x, value:"", valueDate:"", valueSource:"", valueNote:"Wrong sale removed: the next search skips it", valueUrl:"", valueSales:[], priceTried:"", priceAlt:0, review:null, badSales:[...new Set([...(x.badSales||[]), bad])]} : x));
-      toast("Sale removed. Search 130point again for the right price."); openCardPage(myCards.find(x=>x.id===c.id)); renderPriceBar && renderPriceBar(); }
+      toast("Sale removed. Update the price again for the right one."); openCardPage(myCards.find(x=>x.id===c.id)); renderPriceBar && renderPriceBar(); }
     catch(err){ toast("Couldn't save: " + err.message); }
   }
   else if(e.target.id==="cdBadPic"){
@@ -4288,7 +4350,7 @@ function renderTidy(){
     <section><h3>Missing details <span>${md.length ? `<button type="button" class="btn" id="tdFill">Fill in ${md.length} card${md.length===1?"":"s"} from the checklists</button>` : `<span class="ok">✓ All filled in</span>`}</span></h3>
       <p class="hint">Team, rookie, autograph and print run that the set's checklist knows but the card doesn't have yet.</p></section>
     <section><h3>To check <span>${rv.length ? `<button type="button" class="btn" id="tdRev">Check ${rv.length} sale${rv.length===1?"":"s"}</button>` : `<span class="ok">✓ Nothing to check</span>`}</span></h3></section>
-    <section><h3>No price <span>${noPriceNow.length ? `<button type="button" class="btn ghost" id="tdPrice">Search 130point for ${Math.min(noPriceNow.length, RUN_MAX)}</button>` : noPrice.length ? "" : `<span class="ok">✓ All priced</span>`}</span></h3>${noPriceWait ? `<p class="hint">${noPriceWait} card${noPriceWait===1?" was":"s were"} searched in the last 7 days without a sale found: ${noPriceWait===1?"it waits":"they wait"} a week before being searched again.</p>` : ""}${noPrice.length?`<ul>${more([...noPriceNow, ...noPrice.filter(c=>recent(c.priceTried))])}</ul>`:""}</section>
+    <section><h3>No price <span>${noPriceNow.length ? `<button type="button" class="btn ghost" id="tdPrice">Update prices for ${Math.min(noPriceNow.length, RUN_MAX)}</button>` : noPrice.length ? "" : `<span class="ok">✓ All priced</span>`}</span></h3>${noPriceWait ? `<p class="hint">${noPriceWait} card${noPriceWait===1?" was":"s were"} searched in the last 7 days without a sale found: ${noPriceWait===1?"it waits":"they wait"} a week before being searched again.</p>` : ""}${noPrice.length?`<ul>${more([...noPriceNow, ...noPrice.filter(c=>recent(c.priceTried))])}</ul>`:""}</section>
     <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">${pendingPhotos().length ? "Get photos from TCDB" : scpList().length ? "Look on SportsCardsPro" : salePicList().length ? "Use last sale photos" : "Get photos"}</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
     <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
       ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it. If you really got two, tap ✓ Correct and it leaves this list.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button> <button type="button" class="btn ghost" data-twiceok="${esc(l.map(c=>c.id).join(","))}">✓ Correct</button></li>`).join("")}</ul>`:""}</section>
@@ -4302,7 +4364,7 @@ $("#vTidy").addEventListener("click", async e=>{
     try{ await commit("cards", all=>all.map(c=>ids.has(c.id) ? {...c, twiceOk:true} : c)); toast(ids.size > 2 ? "Marked as correct" : "Marked as correct"); }catch(err){ toast("Couldn't save: " + err.message); }
     return renderTidy(); }
   if(e.target.id==="tdRev") return openReview();
-  if(e.target.id==="tdPrice") return price130(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
+  if(e.target.id==="tdPrice") return priceSmart(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
   if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : scpList().length ? $("#findPhotos").click() : salePicList().length ? getSalePhotos() : toast("No photo found on TCDB, SportsCardsPro or the last sale. Open a card to add your own photo.");
   if(e.target.id==="tdFill"){ const md = new Map(missingDetails()); e.target.disabled = true;
     try{ await commit("cards", all=>all.map(c=>md.has(c.id) ? {...c, ...md.get(c.id)} : c)); toast(`Filled in ${md.size} card${md.size===1?"":"s"}`); }catch(err){ toast("Couldn't save: " + err.message); }
