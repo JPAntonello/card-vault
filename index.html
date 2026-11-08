@@ -1325,7 +1325,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794111348";
+const BUILD = "1794115125";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4370,6 +4370,8 @@ function missingDetails(){
 }
 var tidyLoaded = false;   // var: the first render can happen before this line runs
 // cards with no SportsCardsPro page yet, set by set: search it there, then paste its link here
+// cards with no SportsCardsPro link, searched there again (not the ones searched in the last day)
+const scpFindList = () => myCards.filter(c=>priceable(c) && !c.scpUrl && !c.scpReview && !(c.scpNone && Date.now()-Date.parse(c.scpNone) < DAY)).sort(byPriority);
 const slOpen = new Set();   // the sets you opened stay open while you paste links
 document.addEventListener("toggle", e=>{ const d = e.target; if(d.classList && d.classList.contains("slSet")) d.open ? slOpen.add(d.dataset.k) : slOpen.delete(d.dataset.k); }, true);
 function scpLinkSection(){
@@ -4380,7 +4382,8 @@ function scpLinkSection(){
   const row = c => `<li class="slRow"><button type="button" data-open="${esc(c.id)}">${esc(nameOf(c))} #${esc(c.number||"")}${c.variant||c.parallel ? " · "+esc(c.variant||c.parallel) : ""}</button>
       <a href="https://www.sportscardspro.com/search-products?type=prices&q=${encodeURIComponent(scpQueries(c)[0]||nameOf(c))}" target="_blank" rel="noopener">Search ↗</a>
       <input type="url" placeholder="Paste its SportsCardsPro link" data-sl="${esc(c.id)}"><button type="button" class="btn ghost" data-slsave="${esc(c.id)}">Save</button></li>`;
-  return `<section><h3>No SportsCardsPro link <span class="hint">${l.length} card${l.length===1?"":"s"}</span></h3>
+  const sn = scpFindList().length;
+  return `<section><h3>No SportsCardsPro link <span>${sn ? `<button type="button" class="btn ghost" id="tdScpFind" title="Searches SportsCardsPro again for cards with no link: an exact match is linked even with no price there; when several pages could be your card they wait in To check">Search SportsCardsPro for ${Math.min(sn, SCP_MAX)}${sn > SCP_MAX ? ` of ${sn}` : ""}</button>` : ""}</span></h3>
     <p class="hint">Their price comes from 130point. Click Search ↗, open the right card on SportsCardsPro, copy its address and paste it here: from then on the price comes from that page.${l.some(c=>c.scpNone) ? " Cards marked “not found” were searched there without a match." : ""}</p>
     ${sets.map(([k, cs])=>`<details class="slSet" data-k="${esc(k)}"${slOpen.has(k)?" open":""}><summary>${esc(k)} <small>${cs.length}</small></summary><ul>${cs.sort((a,b)=>String(a.number).localeCompare(String(b.number), undefined, {numeric:true})).map(row).join("")}</ul></details>`).join("")}</section>`;
 }
@@ -4418,6 +4421,7 @@ $("#vTidy").addEventListener("click", async e=>{
   if(ss){ const c = myCards.find(x=>x.id===ss.dataset.slsave), inp = $("#vTidy").querySelector(`[data-sl="${CSS.escape(ss.dataset.slsave)}"]`);
     if(c && inp && await setScpLink(c, inp.value)){ const y = window.scrollY; renderTidy(); window.scrollTo(0, y); }
     return; }
+  if(e.target.id==="tdScpFind") return priceScp(scpFindList().slice(0, SCP_MAX));
   if(e.target.id==="tdRev") return openReview();
   if(e.target.id==="tdPrice") return priceSmart(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
   if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : scpList().length ? $("#findPhotos").click() : salePicList().length ? getSalePhotos() : toast("No photo found on TCDB, SportsCardsPro or the last sale. Open a card to add your own photo.");
