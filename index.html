@@ -428,6 +428,11 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 
 body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,body.noprice #sGainW,body.ro .vbadge,body.ro .val,body.ro .pl-row,body.ro .spark,body.ro #sGainW{display:none!important}
 #eyeBtn{white-space:nowrap}
+.slSet{border-top:1px solid #0001;padding:6px 0}.slSet summary{cursor:pointer;font-weight:600}.slSet small{color:#888;font-weight:400;margin-left:4px}
+.slSet ul{list-style:none;padding:0;margin:6px 0}
+.slRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0}
+.slRow input{flex:1;min-width:180px;padding:5px 9px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
+.slRow .btn{padding:4px 12px;font-size:13px}
 .scpPaste{display:flex;gap:6px;margin:4px 0}.scpPaste input{flex:1;min-width:0;padding:6px 10px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
 .scpC{display:flex;flex-direction:column;gap:8px;margin:6px 0}
 .scpO{display:flex;gap:10px;align-items:flex-start}
@@ -1320,7 +1325,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794109187";
+const BUILD = "1794111348";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4364,6 +4369,21 @@ function missingDetails(){
   return out;
 }
 var tidyLoaded = false;   // var: the first render can happen before this line runs
+// cards with no SportsCardsPro page yet, set by set: search it there, then paste its link here
+const slOpen = new Set();   // the sets you opened stay open while you paste links
+document.addEventListener("toggle", e=>{ const d = e.target; if(d.classList && d.classList.contains("slSet")) d.open ? slOpen.add(d.dataset.k) : slOpen.delete(d.dataset.k); }, true);
+function scpLinkSection(){
+  const l = myCards.filter(c=>priceable(c) && !c.scpUrl);
+  if(!l.length) return `<section><h3>No SportsCardsPro link <span><span class="ok">✓ All linked</span></span></h3></section>`;
+  const by = new Map(); for(const c of l){ const k = [c.year, c.set].filter(Boolean).join(" ") || "No set"; if(!by.has(k)) by.set(k, []); by.get(k).push(c); }
+  const sets = [...by.entries()].sort((a,b)=>b[1].length-a[1].length);
+  const row = c => `<li class="slRow"><button type="button" data-open="${esc(c.id)}">${esc(nameOf(c))} #${esc(c.number||"")}${c.variant||c.parallel ? " · "+esc(c.variant||c.parallel) : ""}</button>
+      <a href="https://www.sportscardspro.com/search-products?type=prices&q=${encodeURIComponent(scpQueries(c)[0]||nameOf(c))}" target="_blank" rel="noopener">Search ↗</a>
+      <input type="url" placeholder="Paste its SportsCardsPro link" data-sl="${esc(c.id)}"><button type="button" class="btn ghost" data-slsave="${esc(c.id)}">Save</button></li>`;
+  return `<section><h3>No SportsCardsPro link <span class="hint">${l.length} card${l.length===1?"":"s"}</span></h3>
+    <p class="hint">Their price comes from 130point. Click Search ↗, open the right card on SportsCardsPro, copy its address and paste it here: from then on the price comes from that page.${l.some(c=>c.scpNone) ? " Cards marked “not found” were searched there without a match." : ""}</p>
+    ${sets.map(([k, cs])=>`<details class="slSet" data-k="${esc(k)}"${slOpen.has(k)?" open":""}><summary>${esc(k)} <small>${cs.length}</small></summary><ul>${cs.sort((a,b)=>String(a.number).localeCompare(String(b.number), undefined, {numeric:true})).map(row).join("")}</ul></details>`).join("")}</section>`;
+}
 function renderTidy(){
   if(!tidyLoaded){ tidyLoaded = true; loadAllCatalogs().then(()=>{ if(view==="tidy") renderTidy(); renderView(); }); }
   const md = missingDetails(), noSet = myCards.filter(c=>!c.setId && c.status!=="pending");
@@ -4381,6 +4401,7 @@ function renderTidy(){
       <p class="hint">Team, rookie, autograph and print run that the set's checklist knows but the card doesn't have yet.</p></section>
     <section><h3>To check <span>${rv.length ? `<button type="button" class="btn" id="tdRev">Check ${rv.length} sale${rv.length===1?"":"s"}</button>` : `<span class="ok">✓ Nothing to check</span>`}</span></h3></section>
     <section><h3>No price <span>${noPriceNow.length ? `<button type="button" class="btn ghost" id="tdPrice">Update prices for ${Math.min(noPriceNow.length, RUN_MAX)}</button>` : noPrice.length ? "" : `<span class="ok">✓ All priced</span>`}</span></h3>${noPriceWait ? `<p class="hint">${noPriceWait} card${noPriceWait===1?" was":"s were"} searched in the last 7 days without a sale found: ${noPriceWait===1?"it waits":"they wait"} a week before being searched again.</p>` : ""}${noPrice.length?`<ul>${more([...noPriceNow, ...noPrice.filter(c=>recent(c.priceTried))])}</ul>`:""}</section>
+    ${scpLinkSection()}
     <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">${pendingPhotos().length ? "Get photos from TCDB" : scpList().length ? "Look on SportsCardsPro" : salePicList().length ? "Use last sale photos" : "Get photos"}</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
     <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
       ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it. If you really got two, tap ✓ Correct and it leaves this list.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button> <button type="button" class="btn ghost" data-twiceok="${esc(l.map(c=>c.id).join(","))}">✓ Correct</button></li>`).join("")}</ul>`:""}</section>
@@ -4393,6 +4414,10 @@ $("#vTidy").addEventListener("click", async e=>{
   if(tok){ const ids = new Set((tok.dataset.twiceok || tok.dataset.ids || "").split(",")); tok.disabled = true;
     try{ await commit("cards", all=>all.map(c=>ids.has(c.id) ? {...c, twiceOk:true} : c)); toast(ids.size > 2 ? "Marked as correct" : "Marked as correct"); }catch(err){ toast("Couldn't save: " + err.message); }
     return renderTidy(); }
+  const ss = e.target.closest("[data-slsave]");
+  if(ss){ const c = myCards.find(x=>x.id===ss.dataset.slsave), inp = $("#vTidy").querySelector(`[data-sl="${CSS.escape(ss.dataset.slsave)}"]`);
+    if(c && inp && await setScpLink(c, inp.value)){ const y = window.scrollY; renderTidy(); window.scrollTo(0, y); }
+    return; }
   if(e.target.id==="tdRev") return openReview();
   if(e.target.id==="tdPrice") return priceSmart(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
   if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : scpList().length ? $("#findPhotos").click() : salePicList().length ? getSalePhotos() : toast("No photo found on TCDB, SportsCardsPro or the last sale. Open a card to add your own photo.");
