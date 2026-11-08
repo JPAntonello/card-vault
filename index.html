@@ -1325,7 +1325,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794115125";
+const BUILD = "1794116209";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2595,6 +2595,31 @@ function openFind(site, kind, items){
   toast(`On the ${site==="scp"?"SportsCardsPro":site==="ebay"?"eBay":"130point"} page, click your Card Vault search bookmark`);
 }
 const firstYear = c => { const y = String(c.year||""); const m = y.match(/\d{4}/); return m ? m[0] : (/^\d{2}/.test(y) ? "20"+y.slice(0,2) : ""); };
+// matching SportsCardsPro rows to a card: same player, number, year, the set's own words (Chrome, Carnaval, Superstars…)
+// and exactly its version (the [bracket] on SportsCardsPro: none for a base card)
+const SCP_COMMON = new Set("topps panini uefa club competitions soccer fifa league premier the of edition cards card set team football futbol women s".split(" "));
+const scpSetWords = c => nrm(c.set).replace(/^\d{2,4}[- /]\d{2,4} /,"").split(" ").filter(w=>w && !SCP_COMMON.has(w) && !/^\d/.test(w));
+function scpPick(c, rows){
+  const last = nrm(c.player).split(" ").pop(), num = nrm(String(c.number||"")).replace(/^#/,"").trim();
+  const y = Number(firstYear(c)) || 0, season = /\d{2,4}\s*[-/]\s*\d{2,4}/.test(String(c.year||""));
+  const setw = scpSetWords(c);
+  const mine = new Set([...nrm(c.parallel).split(" "), ...nrm(c.variant).split(" "), ...nrm(ownSub(c)).split(" ")].filter(Boolean));
+  const parw = nrm(c.parallel).split(" ").filter(w=>w && !/^\d/.test(w) && w!=="refractor" && w!=="parallel");
+  return (rows||[]).filter(r=>{
+    const raw = String(r[0]||""), br = (raw.match(/\[([^\]]*)\]/)||[])[1] || "", t = " " + nrm(raw.replace(/\[[^\]]*\]/g, " ")) + " ";
+    const bw = nrm(br).split(" ").filter(w=>w && w!=="refractor");
+    if(!last || !t.includes(" "+last+" ")) return false;
+    if(num && num!=="nno" && !new RegExp("#" + reEsc(num) + "(?![\\w-])", "i").test(raw)) return false;
+    if(y && !(season ? [y] : [y, y-1]).some(v=>t.includes(" "+v+" "))) return false;
+    if(!setw.every(w=>t.includes(" "+w+" "))) return false;
+    if(bw.some(w=>!mine.has(w))) return false;
+    if(parw.some(w=>!bw.includes(w))) return false;
+    return true;
+  });
+}
+const scpQ0 = c => { const y = firstYear(c), num = String(c.number||"").replace(/^#/,""), pw = nrm(c.parallel);
+  const brand = (nrm(c.set).match(/\b(topps|panini|upper deck|futera)\b/)||[])[1] || "";
+  return `${c.player} ${pw} ${num} ${y} ${brand} ${scpSetWords(c).join(" ")}`.replace(/\s+/g," ").trim(); };
 function scpQueries(c){
   const setq = nrm(c.set).replace(/^\d{2,4}[- /]\d{2,4} /,"").replace(/\bpl\b/g,"premier league");
   // the parallel, plus an insert's name (variant words that are not the parallel)
@@ -2970,7 +2995,7 @@ const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scp
 function priceScp(list){
   if(!list.length) return;
   LS.set("cv-findPrice", JSON.stringify(list.map(c=>c.id)));
-  openFind("scp", "price", list.map(c=>[c.id, ...(c.scpUrl ? [c.scpUrl] : scpQueries(c))]));
+  openFind("scp", "price", list.map(c=>[c.id, ...(c.scpUrl ? [c.scpUrl] : [...new Set([scpQ0(c), ...scpQueries(c)])])]));
   $("#priceHelp").open = true; renderPriceBar();
 }
 // a SportsCardsPro page you give for a card: kept as its price page; the next SportsCardsPro update reads its price
@@ -3224,11 +3249,9 @@ async function applyPriceResults(site, results){
       } else {
         // no page yet: one exact match is linked; several possible pages wait in "To check" for you to pick; none: 130point
         const bad = c.scpBad||[], ok = (rows||[]).filter(r=>r[3] && !bad.some(b=>sameUrl(b, r[3])));
-        const exact = ok.filter(r=>cardMatch(r[0], c, true)===0);
-        const last = nrm(c.player).split(" ").pop(), num = nrm(String(c.number||"")).replace(/^#/,"");
-        const maybe = ok.filter(r=>{ const t = " "+nrm(r[0])+" "; return last && t.includes(" "+last+" ") && (!num || num==="nno" || t.includes("#"+num+" ") || t.includes(" "+num+" ")); });
+        const seenU = new Set(), exact = scpPick(c, ok).filter(r=>!seenU.has(r[3]) && seenU.add(r[3]));
         if(exact.length===1){ scpLink.set(id, exact[0][3]); if(exact[0][1]>0) upd.set(id, {value: Math.round(exact[0][1]*100)/100, src:"SportsCardsPro", note:"Ungraded · SportsCardsPro", url: exact[0][3]}); else miss.add(id); }
-        else if(maybe.length){ scpRev.set(id, maybe.slice(0, 6).map(r=>[String(r[0]).slice(0,150), r[1], r[2], r[3]])); }
+        else if(exact.length){ scpRev.set(id, exact.slice(0, 6).map(r=>[String(r[0]).slice(0,150), r[1], r[2], r[3]])); }
         else { scpNone.add(id); miss.add(id); }
       }
     } else {
