@@ -1325,7 +1325,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794117002";
+const BUILD = "1794151880";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3000,13 +3000,16 @@ function priceScp(list){
   $("#priceHelp").open = true; renderPriceBar();
 }
 // a SportsCardsPro page you give for a card: kept as its price page; the next SportsCardsPro update reads its price
+// copies of the same card (same set, number, player and version): one SportsCardsPro page for all of them
+const twinKey = c => [c.setId || nrm(`${c.year||""} ${c.set||""}`), nrm(String(c.number||"")), nrm(c.player), nrm(c.parallel), nrm(c.variant), nrm(c.serial), c.auto?1:0, nrm(c.grade)].join("|");
 async function setScpLink(c, raw){
   const u = String(raw||"").trim(); if(!u) return false;
   if(!/^https?:\/\/(www\.)?sportscardspro\.com\/game\//i.test(u)){ toast("That is not a SportsCardsPro card page (it starts with sportscardspro.com/game/…)"); return false; }
   const url = u.replace(/[?#].*$/,"");
-  try{ await commit("cards", all=>all.map(x=>x.id!==c.id ? x : {...x, scpUrl: url, scpReview: null, scpNone: "", scpNew: true, scpBad: (x.scpBad||[]).filter(b=>!sameUrl(b, url))})); }
+  const tk = twinKey(c), twins = new Set(myCards.filter(x=>x.id===c.id || (!x.scpUrl && twinKey(x)===tk)).map(x=>x.id));
+  try{ await commit("cards", all=>all.map(x=>!twins.has(x.id) ? x : {...x, scpUrl: url, scpReview: null, scpNone: "", scpNew: true, scpBad: (x.scpBad||[]).filter(b=>!sameUrl(b, url))})); }
   catch(err){ toast("Couldn't save: " + err.message); return false; }
-  LS.set("cv-130list", JSON.stringify(lsList("cv-130list").filter(id=>id!==c.id)));
+  LS.set("cv-130list", JSON.stringify(lsList("cv-130list").filter(id=>!twins.has(id))));
   toast("SportsCardsPro page saved · click SportsCardsPro to read its price"); renderPriceBar(); return true;
 }
 // any set of cards: SportsCardsPro for those it can price, the rest wait for 130point (its button shows them)
@@ -3287,6 +3290,9 @@ async function applyPriceResults(site, results){
   const withPic = c => pics.has(c.id) && !c.image && !c.photo ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
   const scpF0 = c => site==="scp" && c.scpNew && results[c.id] ? {...c, scpNew: false} : c;
+  // a page found for one copy is the page of its copies too
+  const twinLink = new Map(); for(const [id, u] of scpLink){ const c = cards.find(x=>x.id===id); if(c) twinLink.set(twinKey(c), u); }
+  for(const c of myCards) if(!c.scpUrl && !scpLink.has(c.id) && twinLink.has(twinKey(c))) scpLink.set(c.id, twinLink.get(twinKey(c)));
   const scpF = c => (c = scpF0(c), scpLink.has(c.id)) ? {...c, scpUrl: scpLink.get(c.id), scpReview: null}
     : scpRev.has(c.id) ? {...c, scpReview: {cands: scpRev.get(c.id), at: day}}
     : scpNone.has(c.id) ? {...c, scpNone: day} : c;
@@ -3665,8 +3671,12 @@ async function dropSalePhotos(){
 const SCP_GAME = /^https?:\/\/(www\.)?sportscardspro\.com\/game\//i;
 const scpKeep = c => !c.scpUrl && SCP_GAME.test(c.valueUrl||"") && !(c.scpBad||[]).some(b=>sameUrl(b, c.valueUrl)) ? {...c, scpUrl: String(c.valueUrl).replace(/[?#].*$/,"")} : c;
 async function keepScpLinks(){
-  if(viewing || !cards.some(c=>scpKeep(c)!==c)) return;
-  try{ await commit("cards", list=>list.map(scpKeep)); }catch{}
+  if(viewing) return;
+  // a copy of a card that already has its SportsCardsPro page gets the same page
+  const has = new Map(); for(const c of cards) if(c.scpUrl) has.set(twinKey(c), c.scpUrl);
+  const twinF = c => !c.scpUrl && has.has(twinKey(c)) && !(c.scpBad||[]).some(b=>sameUrl(b, has.get(twinKey(c)))) ? {...c, scpUrl: has.get(twinKey(c)), scpReview: null, scpNone: ""} : c;
+  if(!cards.some(c=>scpKeep(c)!==c || twinF(c)!==c)) return;
+  try{ await commit("cards", list=>list.map(scpKeep).map(twinF)); }catch{}
 }
 async function restoreTcdbRefs(){
   await keepScpLinks();
@@ -4401,9 +4411,10 @@ document.addEventListener("toggle", e=>{ const d = e.target; if(d.classList && d
 function scpLinkSection(){
   const l = myCards.filter(c=>priceable(c) && !c.scpUrl);
   if(!l.length) return `<section><h3>No SportsCardsPro link <span><span class="ok">✓ All linked</span></span></h3></section>`;
-  const by = new Map(); for(const c of l){ const k = [c.year, c.set].filter(Boolean).join(" ") || "No set"; if(!by.has(k)) by.set(k, []); by.get(k).push(c); }
+  const tw = new Map(); for(const c of l){ const k = twinKey(c); tw.set(k, (tw.get(k)||0) + 1); }
+  const seenT = new Set(), by = new Map(); for(const c of l){ const t = twinKey(c); if(seenT.has(t)) continue; seenT.add(t); const k = [c.year, c.set].filter(Boolean).join(" ") || "No set"; if(!by.has(k)) by.set(k, []); by.get(k).push(c); }
   const sets = [...by.entries()].sort((a,b)=>b[1].length-a[1].length);
-  const row = c => `<li class="slRow"><button type="button" data-open="${esc(c.id)}">${esc(nameOf(c))} #${esc(c.number||"")}${c.variant||c.parallel ? " · "+esc(c.variant||c.parallel) : ""}</button>
+  const row = c => `<li class="slRow"><button type="button" data-open="${esc(c.id)}">${esc(nameOf(c))} #${esc(c.number||"")}${c.variant||c.parallel ? " · "+esc(c.variant||c.parallel) : ""}${tw.get(twinKey(c))>1 ? ` ×${tw.get(twinKey(c))}` : ""}</button>
       <a href="https://www.sportscardspro.com/search-products?type=prices&q=${encodeURIComponent(scpQueries(c)[0]||nameOf(c))}" target="_blank" rel="noopener">Search ↗</a>
       <input type="url" placeholder="Paste its SportsCardsPro link" data-sl="${esc(c.id)}"><button type="button" class="btn ghost" data-slsave="${esc(c.id)}">Save</button></li>`;
   const sn = scpFindList().length;
