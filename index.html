@@ -1325,7 +1325,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794116209";
+const BUILD = "1794117002";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2603,11 +2603,12 @@ function scpPick(c, rows){
   const last = nrm(c.player).split(" ").pop(), num = nrm(String(c.number||"")).replace(/^#/,"").trim();
   const y = Number(firstYear(c)) || 0, season = /\d{2,4}\s*[-/]\s*\d{2,4}/.test(String(c.year||""));
   const setw = scpSetWords(c);
-  const mine = new Set([...nrm(c.parallel).split(" "), ...nrm(c.variant).split(" "), ...nrm(ownSub(c)).split(" ")].filter(Boolean));
-  const parw = nrm(c.parallel).split(" ").filter(w=>w && !/^\d/.test(w) && w!=="refractor" && w!=="parallel");
+  const sg = w => w.length > 3 ? w.replace(/s$/,"") : w;   // "Refractors" = "Refractor"
+  const mine = new Set([...nrm(c.parallel).split(" "), ...nrm(c.variant).split(" "), ...nrm(ownSub(c)).split(" ")].filter(Boolean).map(sg));
+  const parw = nrm(c.parallel).split(" ").map(sg).filter(w=>w && !/^\d/.test(w) && w!=="refractor" && w!=="parallel");
   return (rows||[]).filter(r=>{
     const raw = String(r[0]||""), br = (raw.match(/\[([^\]]*)\]/)||[])[1] || "", t = " " + nrm(raw.replace(/\[[^\]]*\]/g, " ")) + " ";
-    const bw = nrm(br).split(" ").filter(w=>w && w!=="refractor");
+    const bw = nrm(br).split(" ").map(sg).filter(w=>w && w!=="refractor");
     if(!last || !t.includes(" "+last+" ")) return false;
     if(num && num!=="nno" && !new RegExp("#" + reEsc(num) + "(?![\\w-])", "i").test(raw)) return false;
     if(y && !(season ? [y] : [y, y-1]).some(v=>t.includes(" "+v+" "))) return false;
