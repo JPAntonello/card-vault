@@ -1320,7 +1320,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794016153";
+const BUILD = "1794109187";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3261,7 +3261,7 @@ async function applyPriceResults(site, results){
   const scpF = c => (c = scpF0(c), scpLink.has(c.id)) ? {...c, scpUrl: scpLink.get(c.id), scpReview: null}
     : scpRev.has(c.id) ? {...c, scpReview: {cands: scpRev.get(c.id), at: day}}
     : scpNone.has(c.id) ? {...c, scpNone: day} : c;
-  await commit("cards", all=>all.map(withPic).map(scpF).map(c=> upd.has(c.id)
+  await commit("cards", all=>all.map(scpKeep).map(withPic).map(scpF).map(c=> upd.has(c.id)
     ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null, rejSales: [],
        ...(site==="130point" && !c.image && !c.photo && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : {})}
     : review.has(c.id) ? {...c, priceTried: day, priceAlt:0, review: reviewOf(review.get(c.id))}
@@ -3631,7 +3631,16 @@ async function dropSalePhotos(){
     keys.forEach(k=>sharedPhotos.delete(k)); queueSnapshot();
     toast(`${ids.size} photo${ids.size===1?"":"s"} from sales removed: TCDB's photo comes in their place where TCDB has one`); }catch{}
 }
+// a SportsCardsPro page saved in the card's price link (before the cards had their own SportsCardsPro link) becomes its link:
+// a 130point search replaces the price link, the SportsCardsPro link stays for the next price check
+const SCP_GAME = /^https?:\/\/(www\.)?sportscardspro\.com\/game\//i;
+const scpKeep = c => !c.scpUrl && SCP_GAME.test(c.valueUrl||"") && !(c.scpBad||[]).some(b=>sameUrl(b, c.valueUrl)) ? {...c, scpUrl: String(c.valueUrl).replace(/[?#].*$/,"")} : c;
+async function keepScpLinks(){
+  if(viewing || !cards.some(c=>scpKeep(c)!==c)) return;
+  try{ await commit("cards", list=>list.map(scpKeep)); }catch{}
+}
 async function restoreTcdbRefs(){
+  await keepScpLinks();
   await dropSalePhotos();
   const todo = cards.filter(c=>c.setId && !c.tcdbFile && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
   if(!todo.length) return;
@@ -4227,6 +4236,7 @@ function openCardPage(c){
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
     <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
     ${!c.scpUrl && priceable(c) ? `<button type="button" class="btn ghost" id="cdAddScp" title="Paste this card's SportsCardsPro page: its price is read from there on every update">SportsCardsPro link</button>` : ""}
+    ${c.scpUrl ? `<a class="btn ghost" href="${esc(c.scpUrl)}" target="_blank" rel="noopener" title="This card's SportsCardsPro page: its price is read from here when it has one">SportsCardsPro page ↗</a>` : ""}
     ${c.scpUrl ? `<button type="button" class="btn ghost" id="cdBadScp" title="This SportsCardsPro page is not your card: the link and its price are removed; the next update looks for the right page">Wrong SportsCardsPro page</button>` : ""}
     ${c.valueUrl && /ebay/i.test(c.valueSource||"") ? `<button type="button" class="btn ghost" id="cdBadSale" title="This sale is not your card: the price is removed and the next 130point search skips this sale">Wrong sale</button>` : ""}
     ${c.image||c.photo?`<button type="button" class="btn ghost" id="cdBadPic" title="Removes this photo from the card; TCDB's photo is not taken again. Add your own with Edit.">Wrong photo</button>`:""}`;
