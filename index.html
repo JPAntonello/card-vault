@@ -1325,7 +1325,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794151880";
+const BUILD = "1794249685";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2991,7 +2991,7 @@ function renderPriceBar(){
 // cards SportsCardsPro does not have (or with no ungraded price there) use 130point's eBay sales
 const SCP_RETRY = 30, SCP_MAX = 200;
 const scpCan = c => !!c.scpUrl || (!c.scpReview && !(c.scpNone && Date.now()-Date.parse(c.scpNone) < SCP_RETRY*DAY));
-const scpNeed = () => { const w = new Set(lsList("cv-130list")); return toPrice().filter(c=>scpCan(c) && !w.has(c.id) && !needPhoto(c)); };
+const scpNeed = () => { const w = new Set(lsList("cv-130list")); return toPrice().filter(c=>scpCan(c) && (c.scpNew || !w.has(c.id)) && !needPhoto(c)); };   // a newly linked page is read first
 const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scpNeed()); return toPrice().filter(c=>!s.has(c) && !c.scpReview && (w.has(c.id) || !scpCan(c))); };
 function priceScp(list){
   if(!list.length) return;
@@ -3014,7 +3014,7 @@ async function setScpLink(c, raw){
 }
 // any set of cards: SportsCardsPro for those it can price, the rest wait for 130point (its button shows them)
 function priceSmart(list){
-  const w = new Set(lsList("cv-130list")), s = list.filter(c=>scpCan(c) && !w.has(c.id)), r = list.filter(c=>!s.includes(c) && !c.scpReview);
+  const w = new Set(lsList("cv-130list")), s = list.filter(c=>scpCan(c) && (c.scpNew || !w.has(c.id))), r = list.filter(c=>!s.includes(c) && !c.scpReview);
   if(s.length){ if(r.length) LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), ...r.map(c=>c.id)])])); priceScp(s); }
   else price130(r);
 }
