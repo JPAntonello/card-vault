@@ -1336,7 +1336,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794274363";
+const BUILD = "1794274967";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4035,7 +4035,7 @@ async function renderDeep(){
     }
     for(const [sub, rows] of bySub) groups.push({s, sub, rows, have: rows.filter(r=>r.mine && r.mine.length).length});
   }
-  groups.sort((a,b)=>b.have-a.have || yearNum(b.s.year)-yearNum(a.s.year) || a.s.name.localeCompare(b.s.name));
+  groups.sort((a,b)=>yearNum(a.s.year)-yearNum(b.s.year) || a.s.name.localeCompare(b.s.name) || (a.rows[0].par?1:0)-(b.rows[0].par?1:0) || a.sub.length-b.sub.length);   // by year, oldest first
   const total = groups.reduce((n,g)=>n+g.rows.length,0), have = groups.reduce((n,g)=>n+g.have,0);
   box.innerHTML = !groups.length ? `<p class="hint">Nothing called “${esc(deepQ)}” in ${sp.scope==="mine"?"your sets. Try <b>Whole library</b>.":"the library."}</p>`
     : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b></p>` +
