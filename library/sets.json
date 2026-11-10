@@ -1021,5 +1021,27 @@
     "count": 399,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/301324/2021-22-Score-Premier-League",
     "note": "TCDB: 2021 22 Score Premier League · 10 subsets · 37 parallels"
+  },
+  {
+    "id": "mvchr2021ucl",
+    "year": "2020/21",
+    "name": "Topps Chrome UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-10T01:32:33.000Z",
+    "count": 247,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/248049/2020-21-Topps-Chrome-UEFA-Champions-League",
+    "note": "TCDB: 2020 21 Topps Chrome UEFA Champions League · 8 subsets · 60 parallels"
+  },
+  {
+    "id": "mvuwcl2223",
+    "year": "2022/23",
+    "name": "Topps Chrome UEFA Women's Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-10T01:32:33.000Z",
+    "count": 211,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/376234/2022-23-Topps-Chrome-UEFA-Women-s-Champions-League",
+    "note": "TCDB: 2022 23 Topps Chrome UEFA Women s Champions League · 10 subsets · 41 parallels"
   }
 ]
