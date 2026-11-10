@@ -1336,7 +1336,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794275411";
+const BUILD = "1794275815";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4008,7 +4008,7 @@ $("#spBrand").onchange = e=>{ sp.brand = e.target.value; sp.page = 1; saveSp(); 
 $("#spSort").onchange = e=>{ sp.sort = e.target.value; sp.page = 1; saveSp(); renderSetsPage(); };
 $("#spReq").onclick = openSets;
 // search every checklist of the sets in view (My sets or Whole library): which cards of an insert, player or team you have and which you don't
-let deepT = 0, deepQ = "";
+let deepT = 0, deepQ = "", deepN = 60;
 async function renderDeep(){
   const q = norm(deepQ).trim(), box = $("#spDeepRes");
   const on = q.length >= 2; box.hidden = !on; $("#spGrid").hidden = $("#spPager").hidden = $("#spCount").hidden = on;
@@ -4039,14 +4039,15 @@ async function renderDeep(){
   const total = groups.reduce((n,g)=>n+g.rows.length,0), have = groups.reduce((n,g)=>n+g.have,0);
   box.innerHTML = !groups.length ? `<p class="hint">Nothing called “${esc(deepQ)}” in ${sp.scope==="mine"?"your sets. Try <b>Whole library</b>.":"the library."}</p>`
     : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b></p>` +
-      groups.slice(0, 60).map(g=>`<section class="dg">
+      groups.slice(0, deepN).map(g=>`<section class="dg">
         <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
           <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
         <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span><span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
-      (groups.length>60 ? `<p class="hint">Showing 60 of ${groups.length} checklists: add a word to narrow it.</p>` : "");
+      (groups.length>deepN ? `<p class="hint">Showing ${deepN} of ${groups.length} checklists. <button type="button" class="btn ghost" id="deepMore">Show ${Math.min(60, groups.length-deepN)} more</button> or add a word to narrow it.</p>` : "");
 }
-$("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
-$("#spDeepRes").addEventListener("click", e=>{ const b = e.target.closest("[data-dset]"); if(!b) return;
+$("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; deepN = 60; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
+$("#spDeepRes").addEventListener("click", e=>{ if(e.target.id==="deepMore"){ deepN += 60; renderDeep(); return; }
+  const b = e.target.closest("[data-dset]"); if(!b) return;
   openSetPage(b.dataset.dset); if(b.dataset.dsub){ filt.sub = b.dataset.dsub; filt.cl = "all"; saveFilt(); render(); } });
 
 /* ---------- Boxes page ---------- */
