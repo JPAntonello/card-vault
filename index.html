@@ -433,6 +433,14 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
 .slRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0}
 .slRow input{flex:1;min-width:180px;padding:5px 9px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
 .slRow .btn{padding:4px 12px;font-size:13px}
+.sp-deep{margin:10px 0 4px}.sp-deep input{width:100%;padding:10px 14px;border:1px solid #0002;border-radius:12px;font:inherit;background:#fff}
+#spDeepRes .dg{background:#fff;border:1px solid #0001;border-radius:14px;margin:10px 0;overflow:hidden}
+#spDeepRes .dgHead{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;width:100%;text-align:left;padding:10px 14px;border:0;background:#f5f5f7;cursor:pointer;font:inherit}
+#spDeepRes .dgHead span{color:#6e6e73}#spDeepRes .dgHead em{margin-left:auto;font-style:normal;font-weight:600}
+#spDeepRes ul{list-style:none;margin:0;padding:4px 14px 10px}
+#spDeepRes li{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:14px;border-bottom:1px solid #0000000a}
+#spDeepRes li.miss{color:#86868b}#spDeepRes li.have .dgMark{color:#1a7f37;font-weight:700}#spDeepRes li.miss .dgMark{color:#c9c9cf}
+#spDeepRes .dgNum{min-width:62px;font-variant-numeric:tabular-nums}#spDeepRes .dgTeam{margin-left:auto;font-size:12px;color:#86868b;text-align:right}
 .scpPaste{display:flex;gap:6px;margin:4px 0}.scpPaste input{flex:1;min-width:0;padding:6px 10px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
 .scpC{display:flex;flex-direction:column;gap:8px;margin:6px 0}
 .scpO{display:flex;gap:10px;align-items:flex-start}
@@ -479,6 +487,8 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
     <div class="chiprow" id="spSport" role="group" aria-label="Sport"></div>
     <div class="chiprow" id="spYear" role="group" aria-label="Year"></div>
     <div class="sp-tools"><input type="search" id="spQ" placeholder="Search sets…" aria-label="Search sets"><select id="spBrand" aria-label="Brand"></select><select id="spSort" aria-label="Sort sets"><option value="recent">Newest first</option><option value="complete">Most complete</option><option value="owned">Most cards owned</option><option value="value">Most valuable</option><option value="az">A–Z</option></select></div>
+    <div class="sp-deep"><input type="search" id="spDeep" placeholder="Search inside the checklists: an insert, a player, a team… (e.g. Golazo)" aria-label="Search inside the checklists"></div>
+    <div id="spDeepRes" hidden></div>
     <p class="fstatus" id="spCount"></p>
     <div class="setgrid" id="spGrid"></div>
     <nav class="pager" id="spPager" aria-label="Pages"></nav>
@@ -1325,7 +1335,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794249685";
+const BUILD = "1794268843";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3990,12 +4000,53 @@ $("#vSets").addEventListener("click", e=>{
   if(t.dataset.scope!==undefined){ sp.scope = t.dataset.scope; sp.sport = sp.year = sp.brand = ""; }
   else if(t.dataset.sport!==undefined){ sp.sport = t.dataset.sport; sp.year = ""; }
   else if(t.dataset.year!==undefined) sp.year = t.dataset.year;
-  sp.page = 1; saveSp(); renderSetsPage();
+  sp.page = 1; saveSp(); renderSetsPage(); if(deepQ) renderDeep();
 });
 $("#spQ").addEventListener("input", e=>{ sp.q = e.target.value; sp.page = 1; renderSetsPage(); });
 $("#spBrand").onchange = e=>{ sp.brand = e.target.value; sp.page = 1; saveSp(); renderSetsPage(); };
 $("#spSort").onchange = e=>{ sp.sort = e.target.value; sp.page = 1; saveSp(); renderSetsPage(); };
 $("#spReq").onclick = openSets;
+// search every checklist of the sets in view (My sets or Whole library): which cards of an insert, player or team you have and which you don't
+let deepT = 0, deepQ = "";
+async function renderDeep(){
+  const q = norm(deepQ).trim(), box = $("#spDeepRes");
+  const on = q.length >= 2; box.hidden = !on; $("#spGrid").hidden = $("#spPager").hidden = $("#spCount").hidden = on;
+  if(!on){ box.innerHTML = ""; return; }
+  const words = q.split(/\s+/);
+  const all = sets.filter(s=>s.status==="ready"), scope = sp.scope==="mine" ? all.filter(s=>cardsOfSet(s).length) : all;
+  const need = scope.filter(s=>!catalogs[s.id]);
+  if(need.length){ box.innerHTML = `<p class="hint">Reading ${need.length} checklist${need.length===1?"":"s"}…</p>`; await Promise.all(need.map(s=>loadCatalog(s.id).catch(()=>null))); if(norm(deepQ).trim()!==q) return; }
+  const hit = txt => { const t = norm(txt); return words.every(w=>t.includes(w)); };
+  const groups = [];
+  for(const s of scope){
+    const cat = catalogs[s.id]; if(!cat) continue;
+    const own = ownership(s, cat);
+    // inserts and base cards: the insert name, player, team or number match
+    const bySub = new Map();
+    cat.cards.forEach((e,i)=>{ if(!hit([e.sub||"Base", e.player, e.team, e.n, s.name].join(" "))) return;
+      const k = e.sub||"Base"; if(!bySub.has(k)) bySub.set(k, []); bySub.get(k).push({e, i, mine: own.get(i)}); });
+    // a parallel whose name matches (e.g. "Gold Refractor"): its own checklist
+    for(const pr of cat.parallels||[]){
+      if(!hit([pr.parent, pr.name, s.name].join(" ")) || !words.some(w=>norm(pr.name).includes(w)) || hit(s.name)) continue;   // only when you name the parallel ("golazo gold")
+      const pown = parOwnership(s, pr);
+      const rows = pr.cards.map(([n,,pl])=>{ const e = parEntry(cat, pr, n, pl); return e ? {e, i: cat.cards.indexOf(e), par: pr, mine: pown.get(pkey(n,pl))} : null; }).filter(Boolean);
+      if(rows.length) bySub.set(pr.parent + " · " + parLabel(pr), rows);
+    }
+    for(const [sub, rows] of bySub) groups.push({s, sub, rows, have: rows.filter(r=>r.mine && r.mine.length).length});
+  }
+  groups.sort((a,b)=>b.have-a.have || yearNum(b.s.year)-yearNum(a.s.year) || a.s.name.localeCompare(b.s.name));
+  const total = groups.reduce((n,g)=>n+g.rows.length,0), have = groups.reduce((n,g)=>n+g.have,0);
+  box.innerHTML = !groups.length ? `<p class="hint">Nothing called “${esc(deepQ)}” in ${sp.scope==="mine"?"your sets. Try <b>Whole library</b>.":"the library."}</p>`
+    : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b></p>` +
+      groups.slice(0, 60).map(g=>`<section class="dg">
+        <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
+          <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
+        <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span><span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
+      (groups.length>60 ? `<p class="hint">Showing 60 of ${groups.length} checklists: add a word to narrow it.</p>` : "");
+}
+$("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
+$("#spDeepRes").addEventListener("click", e=>{ const b = e.target.closest("[data-dset]"); if(!b) return;
+  openSetPage(b.dataset.dset); if(b.dataset.dsub){ filt.sub = b.dataset.dsub; filt.cl = "all"; saveFilt(); render(); } });
 
 /* ---------- Boxes page ---------- */
 function boxGroups(){
