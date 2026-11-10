@@ -433,24 +433,25 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
 .slRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0}
 .slRow input{flex:1;min-width:180px;padding:5px 9px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
 .slRow .btn{padding:4px 12px;font-size:13px}
-.sp-deep{margin:10px 0 4px}.sp-deep input{width:100%;padding:10px 14px;border:1px solid #0002;border-radius:12px;font:inherit;background:#fff}
-#spDeepRes .dg{background:#fff;border:1px solid #0001;border-radius:14px;margin:10px 0;overflow:hidden}
-#spDeepRes .dgHead{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;width:100%;text-align:left;padding:10px 14px;border:0;background:#f5f5f7;cursor:pointer;font:inherit}
-#spDeepRes .dgHead span{color:#6e6e73}#spDeepRes .dgHead em{margin-left:auto;font-style:normal;font-weight:600}
+.sp-deep{margin:10px 0 4px}.sp-deep input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:var(--surface);color:var(--ink)}
+#spDeepRes .dg{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
+#spDeepRes .dgHead{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;width:100%;text-align:left;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;font:inherit}
+#spDeepRes .dgHead span{color:var(--muted)}#spDeepRes .dgHead em{margin-left:auto;font-style:normal;font-weight:600}
 #spDeepRes ul{list-style:none;margin:0;padding:4px 14px 10px}
-#spDeepRes li{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:14px;border-bottom:1px solid #0000000a}
-#spDeepRes li.miss{color:#86868b}#spDeepRes li.have .dgMark{color:#1a7f37;font-weight:700}#spDeepRes li.miss .dgMark{color:#c9c9cf}
-#spDeepRes .dgNum{min-width:62px;font-variant-numeric:tabular-nums}#spDeepRes .dgTeam{margin-left:auto;font-size:12px;color:#86868b;text-align:right}
-.scpPaste{display:flex;gap:6px;margin:4px 0}.scpPaste input{flex:1;min-width:0;padding:6px 10px;border:1px solid #0002;border-radius:8px;font:inherit;font-size:13px}
+#spDeepRes li{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:14px;border-bottom:1px solid var(--line);color:var(--ink)}
+#spDeepRes li:last-child{border-bottom:0}
+#spDeepRes li.miss{color:var(--muted)}#spDeepRes li.have .dgMark{color:#22a352;font-weight:700}#spDeepRes li.miss .dgMark{color:var(--line)}
+#spDeepRes .dgNum{min-width:62px;font-variant-numeric:tabular-nums}#spDeepRes .dgTeam{margin-left:auto;font-size:12px;color:var(--muted);text-align:right}
+.scpPaste{display:flex;gap:6px;margin:4px 0}.scpPaste input{flex:1;min-width:0;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px;background:var(--surface);color:var(--ink)}
 .scpC{display:flex;flex-direction:column;gap:8px;margin:6px 0}
 .scpO{display:flex;gap:10px;align-items:flex-start}
-.scpO img,.scpO .noimg{width:64px;min-width:64px;height:88px;object-fit:contain;border-radius:6px;background:#f2f2f5;font-size:11px;display:flex;align-items:center;justify-content:center}
+.scpO img,.scpO .noimg{width:64px;min-width:64px;height:88px;object-fit:contain;border-radius:6px;background:var(--bg);color:var(--muted);font-size:11px;display:flex;align-items:center;justify-content:center}
 .scpO div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .scpO .btn{align-self:flex-start;padding:4px 12px;font-size:13px}
-.rejs .rsRow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:6px 0;border-top:1px solid #0001}
+.rejs .rsRow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .rejs .rsRow a{flex:1 1 100%}
-.rejs .rsWhy{flex:1;color:#b45309;font-size:12px}
-.rejs .rsOk{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid #0071e3;background:#fff;color:#0071e3;cursor:pointer}
+.rejs .rsWhy{flex:1;color:#d97706;font-size:12px}
+.rejs .rsOk{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--label,#0071e3);background:var(--surface);color:var(--label,#0071e3);cursor:pointer}
 </style>
 </head>
 <body>
@@ -1335,7 +1336,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794268843";
+const BUILD = "1794269303";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
