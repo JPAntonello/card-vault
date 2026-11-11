@@ -1328,7 +1328,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794413376";
+const BUILD = "1794421342";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3088,7 +3088,7 @@ function priceFromSales(c, sales, rates){
   const seenR = new Set(); priceFromSales.rejected = rej.filter(s=>{ const k = s.url || s.title; if(seenR.has(k)) return false; seenR.add(k); return true; }).slice(0, 8);
   // nothing exactly this version, but a sale that is almost it (same player, number and year, another version word):
   // it waits in "To check" for you to decide
-  const nearOnly = !all.length && near.length > 0;
+  const nearOnly = false;   // close matches (another version word) are never used: they were other versions
   if(nearOnly) all.push(...near);
   if(!all.length) return null;
   all.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
@@ -3265,8 +3265,7 @@ async function applyPriceResults(site, results){
         const bad = c.scpBad||[], ok = (rows||[]).filter(r=>r[3] && !bad.some(b=>sameUrl(b, r[3])));
         const seenU = new Set(), exact = scpPick(c, ok).filter(r=>!seenU.has(r[3]) && seenU.add(r[3]));
         if(exact.length===1){ scpLink.set(id, exact[0][3]); takePic(exact[0]); if(exact[0][1]>0) upd.set(id, {value: Math.round(exact[0][1]*100)/100, src:"SportsCardsPro", note:"Ungraded · SportsCardsPro", url: exact[0][3]}); else miss.add(id); }
-        else if(exact.length){ scpRev.set(id, exact.slice(0, 6).map(r=>[String(r[0]).slice(0,150), r[1], r[2], r[3]])); }
-        else { scpNone.add(id); miss.add(id); }
+        else { scpNone.add(id); miss.add(id); }   // several or no pages: 130point (paste the right SportsCardsPro link on the card if you know it)
       }
     } else {
       if(keepManual() && c.valueSource==="Manual"){ keep.add(id); if(false){ const u = bestSalePhoto(c, rows); if(u) photoWant.set(id, u); else noPic.add(id); } continue; }
@@ -3287,8 +3286,10 @@ async function applyPriceResults(site, results){
       if(!p) rejSeen.set(id, [...hardRej, ...(priceFromSales.rejected||[])].slice(0, 8).map(s=>[s.date, Math.round(s.usd*100)/100, s.url||"", String(s.title||"").slice(0,120), s.why, s.word, salePic(s.img)]));
       if(p && tries>=3) p.why.push("its newer sales were graded, autographed or numbered");
       if(p){ const u = setUsual(c); if(u && p.value > u*4 && p.value-u > 3) p.why.push(`${money(p.value)} is far above the usual ${money(u)} for this version in the set`); }
-      if(p && p.why.length) review.set(id, p);
-      else if(p) upd.set(id, {...p, src:"eBay sold"}); else miss.add(id);
+      // a sale the app is not sure of is not used (they were other versions of the card): it is listed with the sales not counted,
+      // where "This is my card" still takes it
+      if(p && p.why.length){ rejSeen.set(id, [...p.sales.map(s=>[s[0], s[1], s[2], s[3], p.why.join("; "), "", s[4]]), ...(priceFromSales.rejected||[]).map(s=>[s.date, Math.round(s.usd*100)/100, s.url||"", String(s.title||"").slice(0,120), s.why, s.word, salePic(s.img)])].slice(0, 8)); p = null; }
+      if(p) upd.set(id, {...p, src:"eBay sold"}); else miss.add(id);
       if(false && !c.image && !c.photo && !review.has(id)){ const u = p ? p.img : dropped.size ? "" : bestSalePhoto(c, rows); if(u) photoWant.set(id, u); else noPic.add(id); }
     }
   }
@@ -3662,6 +3663,11 @@ setPanel(LS.get("cv-fpanel")==="1");
 // photos saved from sales (eBay, SportsCardsPro, 130point) before 3 Nov 2026 are taken off the cards:
 // photos come only from the TCDB checklist or from you. These ones had no "eBay" mark but are sale photos.
 const SALE_PIC_IDS = new Set(["mvh05hpnczh8om2", "mvh05hpn3y33oh8", "mvh05hpn5h2uqxq", "mvh0rwnj4482oj", "mvhg3p3rdgcecb", "mvic089vdo0ebd", "mvim43ue33l8lp", "mvim4ci1iwnby6", "mvim4k36wyrnw6", "mvjm38zk8c74zc", "mvjm7qw49j2jmq", "mvjm8xfioqo6c5", "mvjmb5j1irqd2f", "mvjmj2au7fvf7m", "mvjmjezmk0oiax", "mvjmkm33qrm1n0", "mvjmor6zlcn5iv", "mvjms5lbjofa2v", "mvjmsrigxsnoex", "mvjnfx81wjqeud", "mvjns9tvxa9t6g", "mvjny65xqia33o", "mvjnybnpmltmhc", "mvjnzpzvrowp4i", "mvjo0r6d7xzyd1", "mvjoawp580wavc", "mvjpc5dszzvcl5", "mvjpe1dggbfgnz", "mvtw6vx946ii4t"]);
+// sales waiting in "To check" were other versions of the cards: they are dropped and never used again
+async function dropSaleChecks(){
+  if(viewing || !myCards.some(c=>c.review || c.scpReview)) return;
+  try{ await commit("cards", all=>all.map(c=>c.scpReview && !c.review ? {...c, scpReview: null, scpNone: isoDay()} : !c.review ? c : {...c, review: null, scpReview: null, badSales: [...new Set([...(c.badSales||[]), c.review.url, ...((c.review.sales||[]).map(s=>s[2]))].filter(Boolean))].slice(-40), priceTried: isoDay()})); }catch{}
+}
 async function dropSalePhotos(){
   // cards marked "Wrong photo" before 5 Nov kept no record of the photo: one that came back from SportsCardsPro or a sale is that photo
   const back = myCards.filter(c=>c.noTcdbPhoto && !(c.badPics||[]).length && c.image && /^(SCP|Sale)$/.test(c.imageSource||""));
@@ -3690,6 +3696,7 @@ async function keepScpLinks(){
 async function restoreTcdbRefs(){
   await keepScpLinks();
   await dropSalePhotos();
+  await dropSaleChecks();
   const todo = cards.filter(c=>c.setId && !c.tcdbFile && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
   if(!todo.length) return;
   await loadDrive().catch(()=>{});
