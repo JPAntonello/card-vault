@@ -267,7 +267,8 @@ body.ro #openBoxBtn{display:none!important}
 .nav button small{font-family:var(--body);font-weight:500;font-size:.75rem;opacity:.7;margin-left:4px;letter-spacing:0}
 body:not([data-view="cards"]) :is(.stats,.searchrow,#activeF,#fPanel,.resbar,#clBar,#grid,#noMatch,#empty){display:none!important}
 body:not([data-view="tidy"]) #vTidy,body:not([data-view="home"]) #vHome,body:not([data-view="sets"]) #vSets,body:not([data-view="boxes"]) #vBoxes{display:none!important}
-body:is([data-view="sets"],[data-view="boxes"]) .tray{display:none!important}
+body:not([data-view="tidy"]) .tray{display:none!important}   /* photo and price updates live in Tidy up */
+#navTidy.dot::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pending);margin-left:4px;vertical-align:middle}
 body:not([data-view="cards"]) :is(#selBtn,#exportBtn){display:none!important}
 body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none!important}
 #setsBtn{display:none!important}
@@ -1327,7 +1328,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794413111";
+const BUILD = "1794413376";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3871,6 +3872,10 @@ async function loadWants(){
 var view = LS.get("cv-view") || "home";
 if(!["home","cards","sets","boxes","tidy"].includes(view)) view = "home";
 document.documentElement.dataset.look = "clean";   // the clean look is the app's only look
+// a dot on Tidy up when photos or prices are waiting (their buttons are on that page)
+function tidyDot(){ const on = !$("#photoBar").hidden || !$("#priceBar").hidden; $("#navTidy").classList.toggle("dot", on); $("#navTidy").title = on ? "Photos or prices to update" : ""; }
+new MutationObserver(tidyDot).observe($("#photoBar"), {attributes:true, attributeFilter:["hidden"]});
+new MutationObserver(tidyDot).observe($("#priceBar"), {attributes:true, attributeFilter:["hidden"]});
 function setView(v){
   view = v; LS.set("cv-view", v); document.body.dataset.view = v;
   document.querySelectorAll("#nav [data-view]").forEach(b=> b.dataset.view===v ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
@@ -4160,6 +4165,7 @@ function renderView(){
   $("#navSets").textContent = sets.filter(s=>s.status==="ready" && cardsOfSet(s).length).length || "";
   $("#navBoxes").textContent = boxGroups().length || "";
   $("#navTidy").textContent = myCards.filter(c=>c.review).length || "";
+  tidyDot();
   if(view==="home") renderHome();
   else if(view==="sets") renderSetsPage();
   else if(view==="boxes") renderBoxesPage();
