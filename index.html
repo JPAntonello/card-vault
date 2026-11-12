@@ -1328,7 +1328,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794453397";
+const BUILD = "1794508033";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1832,7 +1832,7 @@ function cardTile(c, totalQty, group){
     const head = pend ? "Awaiting lookup" : [c.year,c.set].filter(Boolean).join(" ") || "Unknown set";
     const img = c._f ? (c.pk && sharedPhotos.has(c.pk) ? `<img src="${esc(cvSharedUrl(c.pk))}" alt="" loading="lazy">` : esc(c.sport||"Card"))
       : c.photo ? `<img src="${esc(photoSrc(c.photo, c.photoV))}" alt="" loading="lazy">`
-      : c.image ? `<img src="${esc(driveUrl(c.image))}" alt="" loading="lazy">`
+      : c.image ? `<img src="${esc(thumbUrl(driveUrl(c.image)))}" alt="" loading="lazy" decoding="async">`
       : (pend ? "?" : esc(c.sport||"Card"));   // photos come from 130point now, not TCDB
     const sp = String(c.sport||"").toLowerCase().replace(/[^a-z]/g,"");
     return `<button type="button" class="slab${c.gone?" isgone":""}${pend?" pending":""}${sp?" sp-"+sp:""}${selMode&&selIds.has(c.id)?" picked":""}" data-id="${esc(c.id)}">
@@ -1859,6 +1859,9 @@ const norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").
 const driveUrl = p => cvDriveUrl(p);   // SportsCardsPro photos are kept as their web address
 const photoSrc = (id, v) => cvPhotoUrl(id, v);
 const cardImg = c => c.photo ? photoSrc(c.photo, c.photoV) : c.image ? driveUrl(c.image) : "";
+// small version for grids and tiles: a 1600 px picture decoded dozens of times fills the browser's memory
+const thumbUrl = u => String(u||"").replace(/(images\.pricecharting\.com\/[^/]+\/)1600\.jpg/, "$1240.jpg").replace(/(i\.ebayimg\.com\/.+\/s-l)(1600|1200|960)(\.\w+)/, "$1400$3");
+const cardThumb = c => thumbUrl(cardImg(c));
 /* TCDB photo: chosen by default; saved into the Drive folder when the card is saved */
 const TCDB = "tcdb:";
 // par = {p, cid} when the card is a parallel: its photo is the parallel's own TCDB card
@@ -3919,7 +3922,7 @@ function bannerHTML(s, list, badge){
   const photos = [...list].filter(cardImg).sort((a,b)=>(Number(b.value)||0)-(Number(a.value)||0));
   const seen = new Set(), pick = [];
   for(const c of photos){ const k = cardImg(c); if(!seen.has(k)){ seen.add(k); pick.push(c); } if(pick.length===3) break; }
-  const fan = pick.length ? `<div class="fan">${(pick.length===1 ? [null, pick[0], null] : pick.length===2 ? [pick[0], pick[1]] : pick).map(c=>c?`<img src="${esc(cardImg(c))}" alt="" loading="lazy">`:"<i></i>").join("").replace(/<i><\/i>/g,"")}</div>` : `<div class="bigyr">${esc(yearLabel(s.year).slice(0,4))}</div>`;
+  const fan = pick.length ? `<div class="fan">${(pick.length===1 ? [null, pick[0], null] : pick.length===2 ? [pick[0], pick[1]] : pick).map(c=>c?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:"<i></i>").join("").replace(/<i><\/i>/g,"")}</div>` : `<div class="bigyr">${esc(yearLabel(s.year).slice(0,4))}</div>`;
   const cover = s.cover ? `<img class="cover" src="${esc(photoSrc(s.cover, s.coverV))}" alt="" loading="lazy" onerror="this.remove()">` : "";
   return `<div class="banner" style="--c1:${c1};--c2:${c2}">${cover}<div class="bw"><b>${esc(brandOf(s))}</b><span>${esc(subName(s))}</span></div>${fan}${badge||""}</div>`;
 }
