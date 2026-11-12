@@ -1330,7 +1330,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794508880";
+const BUILD = "1794511017";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2651,7 +2651,12 @@ function qItem(c){
   const v = verWords(c), q = q130(c, true);
   // sellers word titles differently: shorter searches find the sales a longer one misses (they run when the first finds under 3 sales)
   const num = String(c.number||"").replace(/^#/,""), setw = q.replace(/^\d{4} /,"").replace(nrm(c.player),"").replace(c.player,"").trim();
-  const more = [/^nno$/i.test(num) || !num ? "" : `${c.player} ${num}`, `${c.player} ${setw} ${v}`, `${c.player} ${setw}`];
+  // every search names the card itself: the player and its number ("Paolo Maldini #LD-11"); an NNO card uses the set words instead
+  if(num && !/^nno$/i.test(num)){
+    const own = `${c.player} #${num}`;
+    return [c.id, ...new Set([`${own} ${v}`, own, `${own} ${setw}`, `${c.player} ${num} ${setw}`].map(s=>s.replace(/\s+/g," ").trim()))];
+  }
+  const more = [`${c.player} ${setw} ${v}`, `${c.player} ${setw}`];
   return [c.id, ...new Set([v ? q+" "+v : q, ...(v ? [q] : []), ...more].map(s=>s.replace(/\s+/g," ").trim()).filter(s=>s && s!==c.player))];
 }
 function q130alt(c){
