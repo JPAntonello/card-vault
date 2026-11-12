@@ -1330,7 +1330,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794512163";
+const BUILD = "1794512893";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3260,7 +3260,7 @@ async function resplitBoxes(looked, force){
 async function applyPriceResults(site, results){
   await Promise.all([...new Set(Object.keys(results||{}).map(id=>(cards.find(x=>x.id===id)||{}).setId).filter(Boolean))].map(id=>loadCatalog(id).catch(()=>null)));
   if(site==="130point") await loadAllCatalogs();   // every checklist's version names count
-  const day = isoDay(), scpLink = new Map(), scpRev = new Map(), scpNone = new Set(), rejSeen = new Map(), upd = new Map(), review = new Map(), miss = new Set(), keep = new Set(), links = new Map(), photoWant = new Map(), noPic = new Set(), pics = new Map(), rates = site==="130point" ? await usdRates() : null;
+  const day = isoDay(), scpLink = new Map(), scpRev = new Map(), scpNone = new Set(), scpEmpty = new Set(), rejSeen = new Map(), upd = new Map(), review = new Map(), miss = new Set(), keep = new Set(), links = new Map(), photoWant = new Map(), noPic = new Set(), pics = new Map(), rates = site==="130point" ? await usdRates() : null;
   for(const [id, rows] of Object.entries(results||{})){
     const c = cards.find(x=>x.id===id); if(!c || rows===null) continue;
     if(site==="scp"){
@@ -3278,7 +3278,7 @@ async function applyPriceResults(site, results){
         const bad = c.scpBad||[], ok = (rows||[]).filter(r=>r[3] && !bad.some(b=>sameUrl(b, r[3])));
         const seenU = new Set(), exact = scpPick(c, ok).filter(r=>!seenU.has(r[3]) && seenU.add(r[3]));
         if(exact.length===1){ scpLink.set(id, exact[0][3]); takePic(exact[0]); if(exact[0][1]>0) upd.set(id, {value: Math.round(exact[0][1]*100)/100, src:"SportsCardsPro", note:"Ungraded · SportsCardsPro", url: exact[0][3]}); else miss.add(id); }
-        else { scpNone.add(id); miss.add(id); }   // several or no pages: 130point (paste the right SportsCardsPro link on the card if you know it)
+        else { (rows||[]).length ? scpNone.add(id) : scpEmpty.add(id); miss.add(id); }   // several or no pages: 130point (paste the right SportsCardsPro link on the card if you know it)
       }
     } else {
       if(keepManual() && c.valueSource==="Manual"){ keep.add(id); if(false){ const u = bestSalePhoto(c, rows); if(u) photoWant.set(id, u); else noPic.add(id); } continue; }
@@ -3319,7 +3319,9 @@ async function applyPriceResults(site, results){
   for(const c of myCards) if(!c.scpUrl && !scpLink.has(c.id) && twinLink.has(twinKey(c))) scpLink.set(c.id, twinLink.get(twinKey(c)));
   const scpF = c => (c = scpF0(c), scpLink.has(c.id)) ? {...c, scpUrl: scpLink.get(c.id), scpReview: null}
     : scpRev.has(c.id) ? {...c, scpReview: {cands: scpRev.get(c.id), at: day}}
-    : scpNone.has(c.id) ? {...c, scpNone: day} : c;
+    : scpNone.has(c.id) ? {...c, scpNone: day}
+    // the search brought nothing at all (often a blocked or slowed-down search): it is tried again in 3 days, not 30
+    : scpEmpty.has(c.id) ? {...c, scpNone: new Date(Date.now() - (SCP_RETRY-3)*DAY).toISOString().slice(0,10)} : c;
   await commit("cards", all=>all.map(scpKeep).map(withPic).map(scpF).map(c=> upd.has(c.id) && !(keepManual() && c.valueSource==="Manual")
     ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null, rejSales: [],
        ...(site==="130point" && !c.image && !c.photo && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : {})}
