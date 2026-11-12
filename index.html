@@ -1339,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794514122";
+const BUILD = "1794517558";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2661,8 +2661,11 @@ function verWords(c){
   return COLORS.test(ws[0]) && ws[1] ? ws[0]+" "+ws[1] : ws[0];
 }
 // the searches for one card: year + set + player (+ version word), or, when that found no price, other words
+// the card's own name and number, the way sellers and SportsCardsPro write it ("Jude Bellingham #118"); NNO cards use name and set
+const qOwn = c => { const n = String(c.number||"").replace(/^#/,"").trim(); return n && !/^nno$/i.test(n) ? `${c.player} #${n}` : q130(c, true); };
 function qItem(c){
-  if(c.priceAlt===1) return [c.id, ...q130alt(c)];
+  // a card with a number is always searched by its own name and number ("Jude Bellingham #118"), also on the second try
+  if(c.priceAlt===1 && (!c.number || /^#?nno$/i.test(String(c.number)))) return [c.id, ...q130alt(c)];
   const v = verWords(c), q = q130(c, true);
   // sellers word titles differently: shorter searches find the sales a longer one misses (they run when the first finds under 3 sales)
   const num = String(c.number||"").replace(/^#/,""), setw = q.replace(/^\d{4} /,"").replace(nrm(c.player),"").replace(c.player,"").trim();
@@ -2905,7 +2908,7 @@ $("#findPhotos").onclick = ()=>{
 $("#find130Photos").onclick = ()=>{
   const ids = new Set(lsList("cv-130photo")), list = noPhoto().filter(c=>ids.has(c.id));
   if(!list.length){ LS.set("cv-130photo", null); renderPhotoBar(); return; }
-  openFind("130point", "photo", list.map(c=>[c.id, q130(c)]));
+  openFind("130point", "photo", list.map(c=>[c.id, qOwn(c)]));
   };
 // the newest eBay sale (read on 130point) of this exact card that has a photo
 function bestSalePhoto(c, rows){
@@ -2993,7 +2996,7 @@ const sameUrl = (a,b) => String(a||"").replace(/[?#].*$/,"").replace(/\/+$/,"").
 function priceLink(c){
   if(c.valueUrl) return {url:c.valueUrl, label: /sportscardspro/.test(c.valueUrl) ? "SportsCardsPro page" : /ebay\./.test(c.valueUrl) ? "eBay sale" : "Source"};
   if(c.valueSource==="SportsCardsPro") return {url:"https://www.sportscardspro.com/search-products?type=prices&q="+encodeURIComponent(scpQueries(c)[0]), label:"SportsCardsPro search"};
-  if(c.valueSource==="eBay sold") return {url:"https://www.ebay.com/sch/i.html?LH_Sold=1&LH_Complete=1&_nkw="+encodeURIComponent(q130(c, true)), label:"eBay sold listings"};
+  if(c.valueSource==="eBay sold") return {url:"https://www.ebay.com/sch/i.html?LH_Sold=1&LH_Complete=1&_nkw="+encodeURIComponent(qOwn(c)), label:"eBay sold listings"};
   return null;
 }
 // prices you typed are looked up too: 130point sales replace them; with no sale found, your price stays
