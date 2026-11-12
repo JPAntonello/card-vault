@@ -1065,5 +1065,16 @@
     "count": 535,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/690745/2025-26-Stadium-Club-Chrome-UEFA-Champions-League",
     "note": "TCDB: 2025 26 Stadium Club Chrome UEFA Champions League · 22 subsets · 148 parallels"
+  },
+  {
+    "id": "mvchrmls26",
+    "year": "2026",
+    "name": "Topps Chrome MLS",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-12T19:26:07.000Z",
+    "count": 640,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/675437/2026-Topps-Chrome-MLS",
+    "note": "TCDB: 2026 Topps Chrome MLS · 22 subsets · 121 parallels"
   }
 ]
