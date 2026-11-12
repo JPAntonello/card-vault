@@ -1330,7 +1330,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794511465";
+const BUILD = "1794511507";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3676,6 +3676,16 @@ setPanel(LS.get("cv-fpanel")==="1");
 // photos saved from sales (eBay, SportsCardsPro, 130point) before 3 Nov 2026 are taken off the cards:
 // photos come only from the TCDB checklist or from you. These ones had no "eBay" mark but are sale photos.
 const SALE_PIC_IDS = new Set(["mvh05hpnczh8om2", "mvh05hpn3y33oh8", "mvh05hpn5h2uqxq", "mvh0rwnj4482oj", "mvhg3p3rdgcecb", "mvic089vdo0ebd", "mvim43ue33l8lp", "mvim4ci1iwnby6", "mvim4k36wyrnw6", "mvjm38zk8c74zc", "mvjm7qw49j2jmq", "mvjm8xfioqo6c5", "mvjmb5j1irqd2f", "mvjmj2au7fvf7m", "mvjmjezmk0oiax", "mvjmkm33qrm1n0", "mvjmor6zlcn5iv", "mvjms5lbjofa2v", "mvjmsrigxsnoex", "mvjnfx81wjqeud", "mvjns9tvxa9t6g", "mvjny65xqia33o", "mvjnybnpmltmhc", "mvjnzpzvrowp4i", "mvjo0r6d7xzyd1", "mvjoawp580wavc", "mvjpc5dszzvcl5", "mvjpe1dggbfgnz", "mvtw6vx946ii4t"]);
+// checklists whose rookie marks were fixed: cards you already have pick up the RC
+const RC_FIXED = ["mvdonwwc2023","mvchr2021ucl","mvuwcl2223","mvuwcl2425","mvsccucl2526","mvchrmls26"];
+async function syncRookies(){
+  if(viewing) return;
+  const ids = RC_FIXED.filter(id=>myCards.some(c=>c.setId===id && !c.rookie)); if(!ids.length) return;
+  const fix = new Set();
+  for(const id of ids){ const cat = catalogs[id] || await loadCatalog(id).catch(()=>null); if(!cat) continue;
+    for(const c of myCards) if(c.setId===id && !c.rookie){ const e = editEntry(cat, c); if(e && e.rc) fix.add(c.id); } }
+  if(fix.size) try{ await commit("cards", all=>all.map(c=>fix.has(c.id) ? {...c, rookie:true} : c)); }catch{}
+}
 // sales waiting in "To check" were other versions of the cards: they are dropped and never used again
 async function dropSaleChecks(){
   if(viewing || !myCards.some(c=>c.review || c.scpReview)) return;
@@ -3710,6 +3720,7 @@ async function restoreTcdbRefs(){
   await keepScpLinks();
   await dropSalePhotos();
   await dropSaleChecks();
+  syncRookies();
   const todo = cards.filter(c=>c.setId && !c.tcdbFile && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
   if(!todo.length) return;
   await loadDrive().catch(()=>{});
