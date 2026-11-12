@@ -907,11 +907,19 @@ async function getDoc(name, fallback){
   docCache[name] = {at: row.updated_at, body: row.body}; if(!/^bk-/.test(name)) keepLocal();
   return row.body;
 }
-async function putDoc(name, body){
+// tabs of Card Vault tell each other when they save, so an old tab never writes over newer data
+const cvBC = (()=>{ try{ return new BroadcastChannel("cardvault"); }catch{ return null; } })();
+let bcT = 0;
+if(cvBC) cvBC.onmessage = e => { const n = e.data && e.data.doc; if(!n || !/^(cards|sources|wants|history)$/.test(n)) return; delete docCache[n]; clearTimeout(bcT); bcT = setTimeout(() => { if(window.cvRefresh) window.cvRefresh(); }, 400); };
+class Stale extends Error {}
+async function putDoc(name, body, check){
+  // the list changed since this tab read it (another tab or device saved): refuse, the app applies its change again on the new list
+  if(check && docCache[name]){ const meta = chk(await sb.from("docs").select("updated_at").eq("user_id", uid).eq("name", name).maybeSingle()); if(meta && meta.updated_at !== docCache[name].at){ delete docCache[name]; throw new Stale("changed elsewhere"); } }
   const at = new Date().toISOString();
   chk(await sb.from("docs").upsert({user_id: uid, name, body, updated_at: at}));
   if(/^bk-|^before-restore$/.test(name)) return;
   docCache[name] = {at, body}; keepLocal();
+  if(cvBC && check) try{ cvBC.postMessage({doc: name}); }catch{}
 }
 
 /* ---------- the set library: this site's library/sets.json + changes saved in Supabase ---------- */
@@ -1010,7 +1018,8 @@ async function api(url, method, rawBody){
   let m;
   if((m = p.match(/^\/api\/(cards|history|sources|wants)$/))){
     if(method === "GET") return J(await getDoc(m[1], []) || []);
-    if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400); await putDoc(m[1], list); return N(); }
+    if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400);
+      try{ await putDoc(m[1], list, true); }catch(e){ if(e instanceof Stale) return T("Changed in another tab", 409); throw e; } return N(); }
   }
   if(p === "/api/sets"){
     if(method === "GET") return J(await getSets());
@@ -1330,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794513617";
+const BUILD = "1794513740";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1407,6 +1416,7 @@ async function getList(name){
   const list = await r.json();
   return Array.isArray(list) ? list : [];
 }
+window.cvRefresh = () => refresh();   // another tab saved: show its version here
 async function refresh(){
   try{ [allCards, sets] = await Promise.all([getList("cards"), getList("sets")]); myCards = allCards.filter(c=>!c.gone); online = true; $("#offline").hidden = true; }
   catch{ online = false; $("#offline").hidden = false; }
@@ -1434,7 +1444,7 @@ $("#fromAdd").onclick = ()=>{ const v = $("#fromNew").value.trim(); if(!v) retur
 $("#fromNew").onkeydown = e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#fromAdd").click(); } };
 $("#fromChips").onclick = e=>{ const b = e.target.closest("[data-delfrom]"); if(b) saveSources(sources.filter(s=>s!==b.dataset.delfrom)); };
 // Apply one change on top of the latest file, so edits Claude made meanwhile are kept.
-async function commit(name, change){
+async function commit(name, change, tries){
   const base = await getList(name), before = name==="cards" ? new Set(base.map(c=>c.id)) : null;
   let next = change(base);
   if(name==="cards"){
@@ -1454,6 +1464,8 @@ async function commit(name, change){
       return k ? {...c, value:k.value, valueDate:k.valueDate, valueSource:k.valueSource, valueNote:k.valueNote, valueUrl:k.valueUrl||"", valueSales:k.valueSales||[]} : c; });
   }
   const r = await fetch("/api/"+name, {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(next, null, 1)});
+  // another Card Vault tab (or device) saved in the meantime: apply this change again on top of its version
+  if(r.status===409 && (tries||0) < 3) return commit(name, change, (tries||0) + 1);
   if(!r.ok) throw new Error(await r.text() || "save failed");
   if(name==="cards"){ allCards = next; myCards = next.filter(c=>!c.gone); if(!viewing) cards = goneView ? next.filter(c=>c.gone) : myCards; queueSnapshot(); } else sets = next;
   render(); renderSets(); renderPhotoBar(); renderPriceBar();

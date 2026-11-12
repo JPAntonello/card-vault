@@ -51,11 +51,19 @@ async function getDoc(name, fallback){
   docCache[name] = {at: row.updated_at, body: row.body}; if(!/^bk-/.test(name)) keepLocal();
   return row.body;
 }
-async function putDoc(name, body){
+// tabs of Card Vault tell each other when they save, so an old tab never writes over newer data
+const cvBC = (()=>{ try{ return new BroadcastChannel("cardvault"); }catch{ return null; } })();
+let bcT = 0;
+if(cvBC) cvBC.onmessage = e => { const n = e.data && e.data.doc; if(!n || !/^(cards|sources|wants|history)$/.test(n)) return; delete docCache[n]; clearTimeout(bcT); bcT = setTimeout(() => { if(window.cvRefresh) window.cvRefresh(); }, 400); };
+class Stale extends Error {}
+async function putDoc(name, body, check){
+  // the list changed since this tab read it (another tab or device saved): refuse, the app applies its change again on the new list
+  if(check && docCache[name]){ const meta = chk(await sb.from("docs").select("updated_at").eq("user_id", uid).eq("name", name).maybeSingle()); if(meta && meta.updated_at !== docCache[name].at){ delete docCache[name]; throw new Stale("changed elsewhere"); } }
   const at = new Date().toISOString();
   chk(await sb.from("docs").upsert({user_id: uid, name, body, updated_at: at}));
   if(/^bk-|^before-restore$/.test(name)) return;
   docCache[name] = {at, body}; keepLocal();
+  if(cvBC && check) try{ cvBC.postMessage({doc: name}); }catch{}
 }
 
 /* ---------- the set library: this site's library/sets.json + changes saved in Supabase ---------- */
@@ -154,7 +162,8 @@ async function api(url, method, rawBody){
   let m;
   if((m = p.match(/^\/api\/(cards|history|sources|wants)$/))){
     if(method === "GET") return J(await getDoc(m[1], []) || []);
-    if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400); await putDoc(m[1], list); return N(); }
+    if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400);
+      try{ await putDoc(m[1], list, true); }catch(e){ if(e instanceof Stale) return T("Changed in another tab", 409); throw e; } return N(); }
   }
   if(p === "/api/sets"){
     if(method === "GET") return J(await getSets());
