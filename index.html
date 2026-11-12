@@ -1339,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794513740";
+const BUILD = "1794514122";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2621,7 +2621,8 @@ const firstYear = c => { const y = String(c.year||""); const m = y.match(/\d{4}/
 const SCP_COMMON = new Set("topps panini uefa club competitions soccer fifa league premier the of edition cards card set team football futbol women s".split(" "));
 const scpSetWords = c => nrm(c.set).replace(/^\d{2,4}[- /]\d{2,4} /,"").split(" ").filter(w=>w && !SCP_COMMON.has(w) && !/^\d/.test(w));
 function scpPick(c, rows){
-  const last = nrm(c.player).split(" ").pop(), num = nrm(String(c.number||"")).replace(/^#/,"").trim();
+  // the number as printed ("ILU-5"): nrm() would turn the dash into a space and no insert number would ever match
+  const last = nrm(c.player).split(" ").pop(), num = String(c.number||"").replace(/^#/,"").trim().toLowerCase();
   const y = Number(firstYear(c)) || 0, season = /\d{2,4}\s*[-/]\s*\d{2,4}/.test(String(c.year||""));
   const setw = scpSetWords(c);
   const sg = w => w.length > 3 ? w.replace(/s$/,"") : w;   // "Refractors" = "Refractor"
