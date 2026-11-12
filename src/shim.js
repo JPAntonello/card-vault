@@ -249,13 +249,15 @@ window.fetch = async (input, init) => {
 };
 
 /* ---------- what the bookmarks send from TCDB and 130point (instead of downloading files) ---------- */
-const okOrigin = o => { try{ return /(^|\.)(tcdb|130point|sportscardspro)\.com$/.test(new URL(o).hostname); }catch{ return false; } };
+const okOrigin = o => { try{ return /(^|\.)(tcdb|130point|sportscardspro|ebay)\.com$/.test(new URL(o).hostname); }catch{ return false; } };
 let linkT = 0, inboxT = 0, photoQ = Promise.resolve(), photosIn = 0;
 const later = (t, fn, ms) => { clearTimeout(t); return setTimeout(fn, ms); };
 addEventListener("message", e => {
   if(!okOrigin(e.origin) || !uid) return;
   const d = e.data || {};
   if(d.cv === "hello"){ try{ e.source.postMessage({cv:"ack"}, e.origin); }catch{} return; }
+  // a bookmark opened from here asks for its list (kept out of the address, where it filled the browser's history)
+  if(d.cv === "getlist"){ if(/^https:\/\/(www\.)?(130point\.com|sportscardspro\.com|ebay\.com|tcdb\.com)$/.test(e.origin)){ try{ e.source.postMessage({cv:"list", s: window.cvHand || ""}, e.origin); }catch{} } return; }
   if(d.cv === "prices" && d.data){
     sb.from("inbox").insert({user_id: uid, data: d.data}).then(r => {
       if(r.error){ console.warn(r.error); return; }
