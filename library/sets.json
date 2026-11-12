@@ -1054,5 +1054,16 @@
     "count": 337,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/579905/2024-25-Topps-Chrome-UEFA-Women-s-Champions-League",
     "note": "TCDB: 2024 25 Topps Chrome UEFA Women s Champions League · 18 subsets · 108 parallels"
+  },
+  {
+    "id": "mvsccucl2526",
+    "year": "2025/26",
+    "name": "Topps Stadium Club Chrome UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-12T03:03:42.000Z",
+    "count": 100,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/690745/2025-26-Stadium-Club-Chrome-UEFA-Champions-League",
+    "note": "TCDB: 2025 26 Stadium Club Chrome UEFA Champions League · 1 subsets · 0 parallels"
   }
 ]
