@@ -1330,7 +1330,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794511017";
+const BUILD = "1794511060";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2635,7 +2635,9 @@ function scpQueries(c){
   // the parallel, plus an insert's name (variant words that are not the parallel)
   const pw = nrm(c.parallel).split(" "), par = [...pw, ...nrm(c.variant).split(" ").filter(w=>!pw.includes(w))].join(" ").replace(/\bprizms?\b/g,"");
   const y = firstYear(c), num = String(c.number||"").replace(/^#/,"");
-  return [...new Set([`${c.player} ${par} ${num} ${y} ${setq}`, `${c.player} ${par} ${num} ${y}`].map(q=>q.replace(/\s+/g," ").trim()))];
+  // every search names the card itself: the player and its number ("Paolo Maldini #LD-11")
+  if(num && !/^nno$/i.test(num)) return [...new Set([`${c.player} #${num} ${par} ${y} ${setq}`, `${c.player} #${num} ${par}`, `${c.player} #${num}`].map(q=>q.replace(/\s+/g," ").trim()))];
+  return [...new Set([`${c.player} ${par} ${y} ${setq}`, `${c.player} ${par} ${y}`].map(q=>q.replace(/\s+/g," ").trim()))];
 }
 // the version's key word(s) for the search: "Raywave", "Green Wave", "Common", "Wonderkids"
 const COLORS = /^(red|blue|green|gold|golden|silver|black|white|pink|purple|orange|yellow|teal|aqua|bronze|lime|violet|cyan|grey|gray)$/;
