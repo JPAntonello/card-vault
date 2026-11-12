@@ -1330,7 +1330,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794512893";
+const BUILD = "1794513617";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4393,7 +4393,8 @@ $("#cdBody").addEventListener("click", e=>{ const ok = e.target.closest(".rsOk")
 $("#cdActs").onclick = async e=>{
   const c = cardOpen; if(!c) return;
   if(e.target.id==="cdEdit"){ closeDrawers(); openDrawer(myCards.find(x=>x.id===c.id) || allCards.find(x=>x.id===c.id)); }
-  else if(e.target.id==="cdPrice"){ closeDrawers(); scpCan(c) && !lsList("cv-130list").includes(c.id) ? priceScp([c]) : price130([c]); }
+  // asked by hand: SportsCardsPro first (unless it already found nothing for this card today), then 130point
+  else if(e.target.id==="cdPrice"){ closeDrawers(); c.scpUrl || c.scpNone !== isoDay() ? priceScp([c]) : price130([c]); }
   else if(e.target.id==="cdCopies"){ closeDrawers(); openCopies(myCards.filter(x=>dupKey(x)===dupKey(c)).map(x=>x.id)); }
   else if(e.target.id==="cdGone"){ closeDrawers(); c.gone ? bringBack(c) : openGone(c); }
   else if(e.target.id==="cdAddScp"){
