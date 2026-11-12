@@ -1330,7 +1330,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794511060";
+const BUILD = "1794511465";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4321,8 +4321,25 @@ function sparkSVG(hist){
   const pts = v.map((y,i)=>`${(pad + i*(W-2*pad)/(v.length-1)).toFixed(1)},${(H-pad - (hi===lo ? (H-2*pad)/2 : (y-lo)*(H-2*pad)/(hi-lo))).toFixed(1)}`).join(" ");
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
 }
+// the card's own page on TCDB: its checklist entry (or its parallel's), else the TCDB photo it came with
+async function tcdbCardUrl(c){
+  let sid = "", cid = "";
+  if(c.setId){
+    const cat = catalogs[c.setId] || await loadCatalog(c.setId).catch(()=>null);
+    if(cat){
+      const p = c.parallelSid ? cat.parBySid.get(String(c.parallelSid)) : null;
+      const pc = p ? parCid(p, c.number, c.player) : null;
+      if(p && pc){ sid = p.sid; cid = pc; }
+      else { const e = editEntry(cat, c); if(e && e.tcdb){ [sid, cid] = e.tcdb; } }
+    }
+  }
+  if(!cid){ const m = String(c.tcdbPath||"").match(/\/(\d+)\/\1-(\d+)Fr\./); if(m){ sid = m[1]; cid = m[2]; } }
+  if(!cid || Number(sid) >= 99000000) return "";   // cards taken from another checklist (not on TCDB yet)
+  return `https://www.tcdb.com/ViewCard.cfm/sid/${sid}/cid/${cid}`;
+}
 function openCardPage(c){
   if(!c) return; cardOpen = c;
+  tcdbCardUrl(c).then(u=>{ const a = $("#cdTcdb"); if(u && a && cardOpen===c){ a.href = u; a.hidden = false; } }).catch(()=>{});
   const img = cardImg(c), copies = (viewing ? cards : myCards).filter(x=>dupKey(x)===dupKey(c)), n = copies.reduce((k,x)=>k+(Number(x.qty)||1),0);
   const hist = c.valueHist||[], fmtD = d => String(d||"").slice(0,10).split("-").reverse().join("/");
   const row = (k,v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
@@ -4351,6 +4368,7 @@ function openCardPage(c){
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
     <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
     ${!c.scpUrl && priceable(c) ? `<button type="button" class="btn ghost" id="cdAddScp" title="Paste this card's SportsCardsPro page: its price is read from there on every update">SportsCardsPro link</button>` : ""}
+    <a class="btn ghost" id="cdTcdb" href="#" target="_blank" rel="noopener" hidden title="This card on TCDB">TCDB page ↗</a>
     ${c.scpUrl ? `<a class="btn ghost" href="${esc(c.scpUrl)}" target="_blank" rel="noopener" title="This card's SportsCardsPro page: its price is read from here when it has one">SportsCardsPro page ↗</a>` : ""}
     ${c.scpUrl ? `<button type="button" class="btn ghost" id="cdBadScp" title="This SportsCardsPro page is not your card: the link and its price are removed; the next update looks for the right page">Wrong SportsCardsPro page</button>` : ""}
     ${c.valueUrl && /ebay/i.test(c.valueSource||"") ? `<button type="button" class="btn ghost" id="cdBadSale" title="This sale is not your card: the price is removed and the next 130point search skips this sale">Wrong sale</button>` : ""}
