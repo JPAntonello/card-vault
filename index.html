@@ -1343,7 +1343,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794586452";
+const BUILD = "1794586641";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3072,7 +3072,7 @@ function price130(list){
 }
 const keepManual = () => LS.get("cv-keepManual")==="1";
 function toPrice(){ const w = new Set(lsList("cv-130list"));
-  return myCards.filter(c=>priceable(c) && (c.scpNew || (!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried)))) || needPhoto(c))); }
+  return myCards.filter(c=>priceable(c) && (c.scpNew || (!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried) && !(Number(c.value)>0 && recent(c.valueDate))))) || needPhoto(c))); }
 // new cards (no price) first, then the most valuable; at most 100 per run so 130point does not block the searches
 const RUN_MAX = 100;
 const byPriority = (a,b) => ((b.priceAlt===1) - (a.priceAlt===1)) || ((Number(a.value)>0) - (Number(b.value)>0)) || (Number(b.value)||0) - (Number(a.value)||0);
@@ -3362,7 +3362,7 @@ async function applyPriceResults(site, results){
   const done = new Set(Object.keys(results||{}).filter(k=>results[k]!==null));
   if(site==="scp"){
     LS.set("cv-findPrice", JSON.stringify(lsList("cv-findPrice").filter(id=>!done.has(id))));
-    LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list"), ...miss])]));
+    LS.set("cv-130list", JSON.stringify([...new Set([...lsList("cv-130list").filter(id=>!upd.has(id)), ...miss])]));   // a card priced now leaves the 130point list
     toast(`${upd.size} price${upd.size===1?"":"s"} from SportsCardsPro` + (pics.size ? ` · ${pics.size} photo${pics.size===1?"":"s"} added` : "") + (scpRev.size ? ` · ${scpRev.size} to check (pick the right page)` : "") + (miss.size ? ` · ${miss.size} not there: use 130point` : ""));
   } else {
     LS.set("cv-130list", JSON.stringify(lsList("cv-130list").filter(id=>!done.has(id))));
