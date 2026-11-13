@@ -267,7 +267,10 @@ body.ro #openBoxBtn{display:none!important}
 .nav button small{font-family:var(--body);font-weight:500;font-size:.75rem;opacity:.7;margin-left:4px;letter-spacing:0}
 body:not([data-view="cards"]) :is(.stats,.searchrow,#activeF,#fPanel,.resbar,#clBar,#grid,#noMatch,#empty){display:none!important}
 body:not([data-view="tidy"]) #vTidy,body:not([data-view="home"]) #vHome,body:not([data-view="sets"]) #vSets,body:not([data-view="boxes"]) #vBoxes{display:none!important}
-body:not([data-view="tidy"]) .tray{display:none!important}   /* photo and price updates live in Tidy up */
+.tray{display:none!important}   /* photo and price updates live in the Tidy up sections, not in banners */
+.tdyTools{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--muted)}
+.tdyTools .moreopt>summary{display:inline;width:auto;height:auto;border:0;margin:0;font-size:12px;text-decoration:underline;cursor:pointer}
+.tdyTools .moreopt[open]{flex-basis:100%}
 #navTidy.dot::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pending);margin-left:4px;vertical-align:middle}
 body:not([data-view="cards"]) :is(#selBtn,#exportBtn){display:none!important}
 body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none!important}
@@ -500,6 +503,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   </section>
   <section class="view" id="vTidy" aria-label="Tidy up">
     <div class="pagehead"><div><h2>Tidy up</h2><p class="sub">Things worth fixing in your collection, each with a quick fix.</p></div></div>
+    <div class="tdyTools" id="tdyTools"><span>Drag to your bookmarks bar:</span></div>
     <div class="tdy" id="tdyBody"></div>
   </section>
   <section class="view" id="vBoxes" aria-label="Boxes">
@@ -1339,7 +1343,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794586255";
+const BUILD = "1794586452";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1416,7 +1420,9 @@ async function getList(name){
   const list = await r.json();
   return Array.isArray(list) ? list : [];
 }
-window.cvRefresh = () => refresh();   // another tab saved: show its version here
+window.cvRefresh = () => refresh();
+// the bookmarks and the price options live at the top of Tidy up
+{ const t = $("#tdyTools"); if(t){ t.append($("#bmLink"), $("#bmFind")); const mo = document.querySelector("#priceHelp .moreopt"); if(mo) t.append(mo); } }   // another tab saved: show its version here
 async function refresh(){
   try{ [allCards, sets] = await Promise.all([getList("cards"), getList("sets")]); myCards = allCards.filter(c=>!c.gone); online = true; $("#offline").hidden = true; }
   catch{ online = false; $("#offline").hidden = false; }
@@ -4560,6 +4566,7 @@ function renderTidy(){
   const noPhoto = myCards.filter(c=>!c.image && !c.photo), noPrice = myCards.filter(c=>priceable(c) && !(Number(c.value)>0));
   // a card searched without finding a price waits a week before it is searched again
   const noPriceNow = noPrice.filter(c=>!recent(c.priceTried)), noPriceWait = noPrice.length - noPriceNow.length;
+  const sN = scpNeed().length, pN = need130().length, oldPrice = toPrice().filter(c=>Number(c.value)>0 && stalePrice(c)).length, picWant = scpNeed().filter(c=>!toPrice().includes(c)).length;
   const rv = myCards.filter(c=>c.review);
   // the same card entered twice on the same day from the same place: often a double click
   const g = new Map(); for(const c of myCards){ const k = dupKey(c)+"|"+String(c.added||"").slice(0,10)+"|"+(c.from||""); if(!g.has(k)) g.set(k, []); g.get(k).push(c); }
@@ -4569,8 +4576,9 @@ function renderTidy(){
   $("#tdyBody").innerHTML = `
     <section><h3>Missing details <span>${md.length ? `<button type="button" class="btn" id="tdFill">Fill in ${md.length} card${md.length===1?"":"s"} from the checklists</button>` : `<span class="ok">✓ All filled in</span>`}</span></h3>
       <p class="hint">Team, rookie, autograph and print run that the set's checklist knows but the card doesn't have yet.</p></section>
-    <section><h3>To check <span>${rv.length ? `<button type="button" class="btn" id="tdRev">Check ${rv.length} sale${rv.length===1?"":"s"}</button>` : `<span class="ok">✓ Nothing to check</span>`}</span></h3></section>
-    <section><h3>No price <span>${noPriceNow.length ? `<button type="button" class="btn ghost" id="tdPrice">Update prices for ${Math.min(noPriceNow.length, RUN_MAX)}</button>` : noPrice.length ? "" : `<span class="ok">✓ All priced</span>`}</span></h3>${noPriceWait ? `<p class="hint">${noPriceWait} card${noPriceWait===1?" was":"s were"} searched in the last 7 days without a sale found: ${noPriceWait===1?"it waits":"they wait"} a week before being searched again.</p>` : ""}${noPrice.length?`<ul>${more([...noPriceNow, ...noPrice.filter(c=>recent(c.priceTried))])}</ul>`:""}</section>
+    <section><h3>Prices <span>${sN ? `<button type="button" class="btn" id="tdScp" title="Each card's own SportsCardsPro page">SportsCardsPro (${Math.min(sN, SCP_MAX)})</button>` : ""}${pN ? ` <button type="button" class="btn" id="td130" title="eBay sales on 130point, for cards SportsCardsPro has no price for">130point (${Math.min(pN, RUN_MAX)})</button>` : ""}${!sN && !pN && !noPrice.length ? `<span class="ok">✓ All priced and up to date</span>` : ""}</span></h3>
+      <p class="hint">${[noPrice.length ? `${noPrice.length} without a price${noPriceWait ? ` (${noPriceWait} searched in the last 7 days with nothing found: they wait a week)` : ""}` : "", oldPrice ? `${oldPrice} price${oldPrice===1?"":"s"} over a week old to refresh` : "", picWant ? `${picWant} also get their photo from SportsCardsPro` : ""].filter(Boolean).join(" · ") || "Every card has a recent price."}</p>
+      ${noPriceNow.length ? `<ul>${more(noPriceNow)}</ul>` : ""}</section>
     ${scpLinkSection()}
     <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">${pendingPhotos().length ? "Get photos from TCDB" : scpList().length ? "Look on SportsCardsPro" : salePicList().length ? "Use last sale photos" : "Get photos"}</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
     <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
@@ -4590,6 +4598,8 @@ $("#vTidy").addEventListener("click", async e=>{
     return; }
   if(e.target.id==="tdScpFind") return priceScp(scpFindList().slice(0, SCP_MAX));
   if(e.target.id==="tdRev") return openReview();
+  if(e.target.id==="tdScp") return $("#updPrices").click();
+  if(e.target.id==="td130") return $("#get130").click();
   if(e.target.id==="tdPrice") return priceSmart(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
   if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : scpList().length ? $("#findPhotos").click() : salePicList().length ? getSalePhotos() : toast("No photo found on TCDB, SportsCardsPro or the last sale. Open a card to add your own photo.");
   if(e.target.id==="tdFill"){ const md = new Map(missingDetails()); e.target.disabled = true;
