@@ -1339,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794535855";
+const BUILD = "1794577085";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3023,7 +3023,8 @@ function renderPriceBar(){
 // prices: SportsCardsPro first, from each card's own page (linked once: an exact match, or the page you pick in "To check");
 // cards SportsCardsPro does not have (or with no ungraded price there) use 130point's eBay sales
 const SCP_RETRY = 30, SCP_MAX = 200;
-const scpCan = c => !!c.scpUrl || (!c.scpReview && !(c.scpNone && Date.now()-Date.parse(c.scpNone) < SCP_RETRY*DAY));
+// a linked card whose page had no price (or that kept your typed price) waits a week before SportsCardsPro is read again: 130point meanwhile
+const scpCan = c => c.scpUrl ? !(c.scpTried && Date.now()-Date.parse(c.scpTried) < 7*DAY) : (!c.scpReview && !(c.scpNone && Date.now()-Date.parse(c.scpNone) < SCP_RETRY*DAY));
 const scpNeed = () => { const w = new Set(lsList("cv-130list")), l = toPrice().filter(c=>scpCan(c) && (c.scpNew || !w.has(c.id)) && !needPhoto(c)), s = new Set(l);
   // cards with a SportsCardsPro page and no photo: the same run brings the photo (their price is refreshed too)
   return [...l, ...myCards.filter(c=>c.scpUrl && !s.has(c) && priceable(c) && wantsScpPic(c) && !(c.scpPicTried && Date.now()-Date.parse(c.scpPicTried) < 7*DAY))]; };   // its own wait: other photo searches do not count   // a newly linked page is read first
@@ -3330,7 +3331,7 @@ async function applyPriceResults(site, results){
   const withPic = c => pics.has(c.id) && ((!c.image && !c.photo) || c.imageSource==="Sale") ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
     : site==="scp" && c.scpUrl && results[c.id] && wantsScpPic(c) && !c.image && !c.photo ? {...c, scpPicTried: photoNow}
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
-  const scpF0 = c => site==="scp" && c.scpNew && results[c.id] ? {...c, scpNew: false} : c;
+  const scpF0 = c => site!=="scp" || !results[c.id] ? c : {...c, ...(c.scpNew ? {scpNew: false} : {}), ...(!upd.has(c.id) || (keepManual() && c.valueSource==="Manual") ? {scpTried: day} : {})};
   // a page found for one copy is the page of its copies too
   const twinLink = new Map(); for(const [id, u] of scpLink){ const c = cards.find(x=>x.id===id); if(c) twinLink.set(twinKey(c), u); }
   for(const c of myCards) if(!c.scpUrl && !scpLink.has(c.id) && twinLink.has(twinKey(c))) scpLink.set(c.id, twinLink.get(twinKey(c)));
