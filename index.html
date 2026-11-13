@@ -1339,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794577671";
+const BUILD = "1794586255";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3016,8 +3016,10 @@ function renderPriceBar(){
   // SportsCardsPro first (each card's own page); 130point only for the cards it does not have
   $("#updPrices").hidden = !sN; $("#updPrices").textContent = `SportsCardsPro (${Math.min(sN, SCP_MAX)})`;
   $("#get130").hidden = !pN; $("#get130").textContent = `130point (${Math.min(pN, RUN_MAX)})`;
-  { const L = toPrice(), ph = L.filter(needPhoto).length, pr = L.filter(c=>stalePrice(c) || lsList("cv-130list").includes(c.id)).length;
-    $("#priceCount").textContent = [pr ? `${pr} need a price update` : "", ph ? `${ph} need a photo` : ""].filter(Boolean).join(" · "); }
+  { const L = toPrice(), ph = L.filter(needPhoto).length, P = L.filter(c=>stalePrice(c) || lsList("cv-130list").includes(c.id));
+    // two different things: cards with no price yet, and prices more than a week old to refresh
+    const np = P.filter(c=>!(Number(c.value)>0)).length, old = P.length - np;
+    $("#priceCount").textContent = [np ? `${np} without a price` : "", old ? `${old} price${old===1?"":"s"} to refresh (over a week old)` : "", ph ? `${ph} need a photo` : ""].filter(Boolean).join(" · "); }
   $("#priceInfo").textContent = "";
 }
 // prices: SportsCardsPro first, from each card's own page (linked once: an exact match, or the page you pick in "To check");
