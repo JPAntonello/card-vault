@@ -1343,7 +1343,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794592434";
+const BUILD = "1794605155";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3356,7 +3356,8 @@ async function applyPriceResults(site, results){
     // not found: the next search uses other words; only when that also finds nothing is the card left for a week
     : site==="130point" && miss.has(c.id) && c.priceAlt!==1 ? {...c, priceAlt:1, priceTried:"", rejSales: rejSeen.get(c.id) || []}
     // no eBay sale of this exact card: no price (rather than a guess); typed prices are never touched
-    : site==="130point" && miss.has(c.id) ? (c.valueSource==="Manual" ? {...c, priceTried: day, priceAlt:0} : {...c, rejSales: [...(rejSeen.get(c.id) || []), ...(c.rejSales||[]).filter(r=>!(rejSeen.get(c.id)||[]).some(q=>q[2]===r[2] && q[3]===r[3]))].slice(0, 8), value: "", valueDate: "", valueSource: "", valueNote: "No eBay sales of this card on 130point", valueSales: [], valueUrl: "", priceTried: day, priceAlt:0})
+    // a card that already has a price keeps it when no newer sale turns up (it was a real sale); only a card with none stays without
+    : site==="130point" && miss.has(c.id) ? (c.valueSource==="Manual" || Number(c.value)>0 ? {...c, priceTried: day, priceAlt:0} : {...c, rejSales: [...(rejSeen.get(c.id) || []), ...(c.rejSales||[]).filter(r=>!(rejSeen.get(c.id)||[]).some(q=>q[2]===r[2] && q[3]===r[3]))].slice(0, 8), value: "", valueDate: "", valueSource: "", valueNote: "No eBay sales of this card on 130point", valueSales: [], valueUrl: "", priceTried: day, priceAlt:0})
     : keep.has(c.id) ? {...c, priceTried: day}
     : links.has(c.id) ? {...c, valueUrl: links.get(c.id), valueLinkNote: "On SportsCardsPro, no ungraded price yet"} : c));
   // a search that got no answer (null) stays on the list, to be tried again
