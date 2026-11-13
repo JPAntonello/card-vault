@@ -1339,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794577085";
+const BUILD = "1794577671";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3329,7 +3329,7 @@ async function applyPriceResults(site, results){
       const r = res.ok ? await res.json() : null; if(r && r.ok) pics.set(id, r); else noPic.add(id); }catch{ noPic.add(id); } }
   const photoNow = new Date().toISOString();
   const withPic = c => pics.has(c.id) && ((!c.image && !c.photo) || c.imageSource==="Sale") ? {...c, image: pics.get(c.id).file, imageSource: pics.get(c.id).source || "eBay", tcdbFile:"", tcdbPath:"", photoTried:""}
-    : site==="scp" && c.scpUrl && results[c.id] && wantsScpPic(c) && !c.image && !c.photo ? {...c, scpPicTried: photoNow}
+    : site==="scp" && c.scpUrl && results[c.id] && wantsScpPic(c) ? {...c, scpPicTried: photoNow}   // also a card that keeps its sale photo: not asked again for a week
     : noPic.has(c.id) && !c.image && !c.photo ? {...c, photoTried: photoNow} : c;
   const scpF0 = c => site!=="scp" || !results[c.id] ? c : {...c, ...(c.scpNew ? {scpNew: false} : {}), ...(!upd.has(c.id) || (keepManual() && c.valueSource==="Manual") ? {scpTried: day} : {})};
   // a page found for one copy is the page of its copies too
