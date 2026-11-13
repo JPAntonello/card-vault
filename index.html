@@ -1339,7 +1339,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794517558";
+const BUILD = "1794534953";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4364,7 +4364,11 @@ async function tcdbCardUrl(c){
   }
   if(!cid){ const m = String(c.tcdbPath||"").match(/\/(\d+)\/\1-(\d+)Fr\./); if(m){ sid = m[1]; cid = m[2]; } }
   if(!cid || Number(sid) >= 99000000) return "";   // cards taken from another checklist (not on TCDB yet)
-  return `https://www.tcdb.com/ViewCard.cfm/sid/${sid}/cid/${cid}`;
+  // TCDB only opens the card when the address ends with a name that starts with the set's year ("2020-21-Topps-…")
+  const s = sets.find(x=>x.id===c.setId), cat = catalogs[c.setId];
+  const slug = (String((s && s.url) || (cat && cat.url) || c.url || "").match(/sid\/\d+\/([^/?#]+)/)||[])[1]
+    || `${String(c.year||"").replace(/\//g,"-")}-${String(c.set||"").replace(/[^A-Za-z0-9]+/g,"-")}`.replace(/-+/g,"-").replace(/^-|-$/g,"");
+  return `https://www.tcdb.com/ViewCard.cfm/sid/${sid}/cid/${cid}/${slug}`;
 }
 function openCardPage(c){
   if(!c) return; cardOpen = c;
