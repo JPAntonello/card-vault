@@ -1343,7 +1343,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794586641";
+const BUILD = "1794592434";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2863,8 +2863,8 @@ function renderPhotoBar(){
   if(finding) return;
   const n = pendingPhotos().length, m = noPhoto().length;
   // photos come from the set's TCDB checklist (sale photos from 130point were often of another card)
-  const s = scpList().length;
-  const sp = !n && !s ? salePicList().length : 0;
+  const s = 0;   // SportsCardsPro photos come with the price run (the card's own page), not from a search
+  const sp = !n ? salePicList().length : 0;
   $("#salePhotos").hidden = !sp; $("#salePhotos").textContent = `Sale photos (${Math.min(sp, RUN_MAX)})`;
   $("#photoBar").hidden = !n && !s && !sp; $("#findPhotos").hidden = !s; $("#findPhotos").textContent = `SportsCardsPro (${Math.min(s, RUN_MAX)})`;
   $("#getPhotos").hidden = !n;
@@ -2880,7 +2880,9 @@ const photoFile = c => c.tcdbFile || (safeName(`${c.year||""} ${c.set} #${c.numb
 const cardBody = c => ({player:c.player, number:c.number, year:c.year, set:c.set, team:c.team||"", variant:c.variant||"", parallel:c.parallel||"", serial:c.serial||"", auto:!!c.auto});
 // cards TCDB has no photo for (none on the way), not searched on SportsCardsPro in the last week
 // cards with no photo after TCDB and SportsCardsPro: they take the photo of their last sale
-const salePicList = () => { const wait = new Set([...pendingPhotos(), ...scpList()]); return myCards.filter(c=>!c.image && !c.photo && !c.noSalePic && c.status!=="pending" && priceable(c) && !wait.has(c) && !(c.salePicTried && Date.now()-Date.parse(c.salePicTried) < 7*DAY)); };
+// a photo only from the card's own last sale (its saved link): no new search; a card with no sale and no SportsCardsPro page has no photo source
+const hasSaleLink = c => !!(c.valueSales && c.valueSales[0] && c.valueSales[0][4]) || /ebay\./.test(c.valueUrl||"");
+const salePicList = () => { const wait = new Set(pendingPhotos()); return myCards.filter(c=>!c.image && !c.photo && !c.noSalePic && c.status!=="pending" && !wait.has(c) && hasSaleLink(c) && !(c.salePicTried && Date.now()-Date.parse(c.salePicTried) < 7*DAY)); };
 async function applySalePics(results){
   const pics = new Map();
   for(const [id, rows] of Object.entries(results)){ const u = salePic(rows && rows[0] && rows[0][2]); if(u) pics.set(id, u); }
@@ -2895,11 +2897,10 @@ async function getSalePhotos(){
   if(now.length){ const ids = new Map(now.map(c=>[c.id, c.valueSales[0][4]]));
     try{ await commit("cards", all=>all.map(c=> ids.has(c.id) && !c.image && !c.photo ? {...c, image: ids.get(c.id), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : c)); }catch(err){ return toast("Couldn't save: " + err.message); }
     toast(`${now.length} sale photo${now.length===1?"":"s"} added`); renderPhotoBar(); }
-  // a saved sale: its eBay page gives the photo (no new 130point search); no saved sale: 130point (price + photo)
-  const left = list.filter(c=>!now.includes(c)), onEbay = left.filter(c=>/ebay\./.test(c.valueUrl||"") && !(c.salePicTried && Date.now()-Date.parse(c.salePicTried) < 7*DAY));
+  // a saved sale: its eBay page gives the photo (the card is never searched again for it)
+  const onEbay = list.filter(c=>!now.includes(c) && /ebay\./.test(c.valueUrl||""));
   if(onEbay.length) return openFind("ebay", "salepic", onEbay.sort(byPriority).slice(0, RUN_MAX).map(c=>[c.id, c.valueUrl]));
-  const rest = left.filter(c=>!c.valueUrl).sort(byPriority).slice(0, RUN_MAX);
-  if(rest.length) price130(rest); else if(!now.length) toast("Their sales had no photo. Open a card to add your own.");
+  if(!now.length) toast("Their sales had no photo. Open a card to add your own.");
 }
 // a card that wants its photo from SportsCardsPro: none yet (or only a sale photo), and TCDB has none
 const wantsScpPic = c => ((!c.image && !c.photo) || c.imageSource==="Sale") && !c.noSalePic && (!c.tcdbFile || tcdbNoneNow(c));
@@ -4580,7 +4581,7 @@ function renderTidy(){
       <p class="hint">${[noPrice.length ? `${noPrice.length} without a price${noPriceWait ? ` (${noPriceWait} searched in the last 7 days with nothing found: they wait a week)` : ""}` : "", oldPrice ? `${oldPrice} price${oldPrice===1?"":"s"} over a week old to refresh` : "", picWant ? `${picWant} also get their photo from SportsCardsPro` : ""].filter(Boolean).join(" · ") || "Every card has a recent price."}</p>
       ${noPriceNow.length ? `<ul>${more(noPriceNow)}</ul>` : ""}</section>
     ${scpLinkSection()}
-    <section><h3>No photo <span>${noPhoto.length ? `<button type="button" class="btn ghost" id="tdPhoto">${pendingPhotos().length ? "Get photos from TCDB" : scpList().length ? "Look on SportsCardsPro" : salePicList().length ? "Use last sale photos" : "Get photos"}</button>` : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<ul>${more(noPhoto)}</ul>`:""}</section>
+    <section><h3>No photo <span>${pendingPhotos().length ? `<button type="button" class="btn ghost" id="tdPhoto">Get photos from TCDB (${Math.min(pendingPhotos().length, RUN_MAX)})</button>` : salePicList().length ? `<button type="button" class="btn ghost" id="tdPhoto">Use last sale photos (${Math.min(salePicList().length, RUN_MAX)})</button>` : noPhoto.length ? "" : `<span class="ok">✓ All have a photo</span>`}</span></h3>${noPhoto.length?`<p class="hint">${noPhoto.length} without a photo. Photos come from TCDB, the card's SportsCardsPro page (read in the SportsCardsPro price run) or the link of its last sale. ${noPhoto.filter(c=>!pendingPhotos().includes(c) && !c.scpUrl && !hasSaleLink(c)).length} have none of these: add their photo with Edit.</p><ul>${more(noPhoto)}</ul>`:""}</section>
     <section><h3>Entered twice on the same day? <span>${twice.length ? `<button type="button" class="btn ghost" id="tdTwiceOk" data-ids="${esc(twice.flat().map(c=>c.id).join(","))}">All are correct</button>` : `<span class="ok">✓ None</span>`}</span></h3>
       ${twice.length?`<p class="hint">Same card, same day, same place. If one is a mistake, open it and remove it. If you really got two, tap ✓ Correct and it leaves this list.</p><ul>${twice.slice(0,15).map(l=>`<li><button type="button" data-copies="${esc(l.map(c=>c.id).join(","))}">${esc(nameOf(l[0]))} #${esc(l[0].number||"")} · ${l.length} entries · ${esc(String(l[0].added||"").slice(0,10))}</button> <button type="button" class="btn ghost" data-twiceok="${esc(l.map(c=>c.id).join(","))}">✓ Correct</button></li>`).join("")}</ul>`:""}</section>
     <section><h3>Not linked to a set <span>${noSet.length ? "" : `<span class="ok">✓ None</span>`}</span></h3>${noSet.length?`<p class="hint">These cards don't use a checklist, so they can't be matched exactly. Ask Claude to add their set.</p><ul>${more(noSet)}</ul>`:""}</section>`;
@@ -4601,7 +4602,7 @@ $("#vTidy").addEventListener("click", async e=>{
   if(e.target.id==="tdScp") return $("#updPrices").click();
   if(e.target.id==="td130") return $("#get130").click();
   if(e.target.id==="tdPrice") return priceSmart(myCards.filter(c=>priceable(c) && !(Number(c.value)>0) && !recent(c.priceTried)).sort(byPriority).slice(0, RUN_MAX));
-  if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : scpList().length ? $("#findPhotos").click() : salePicList().length ? getSalePhotos() : toast("No photo found on TCDB, SportsCardsPro or the last sale. Open a card to add your own photo.");
+  if(e.target.id==="tdPhoto") return pendingPhotos().length ? $("#getPhotos").click() : salePicList().length ? getSalePhotos() : toast("No photo source left: open a card and add your own photo.");
   if(e.target.id==="tdFill"){ const md = new Map(missingDetails()); e.target.disabled = true;
     try{ await commit("cards", all=>all.map(c=>md.has(c.id) ? {...c, ...md.get(c.id)} : c)); toast(`Filled in ${md.size} card${md.size===1?"":"s"}`); }catch(err){ toast("Couldn't save: " + err.message); }
     renderTidy(); }
