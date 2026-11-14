@@ -170,6 +170,16 @@ label input,label select,label textarea{font:inherit;font-size:.95rem;text-trans
 .menu button small{display:block;color:var(--muted);font-size:.75rem}
 .menu button:hover,.menu button:focus-visible{background:var(--bg)}
 .hchart{position:relative}
+.vchart{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px 8px}
+.vchart .vTop{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-bottom:6px}
+.vchart .vTop b{font-size:1.5rem;font-variant-numeric:tabular-nums}.vchart .vTop .chips{margin-left:auto;display:flex;gap:6px}
+.vchart .vTop .chip{font-size:12px;padding:3px 10px}.vchart small{color:var(--muted)}
+.vmoves{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px}
+.vmoves h4{margin:0 0 6px;font-size:.95rem}.vmoves ol{list-style:none;margin:0;padding:0}
+.vmoves li button{display:flex;gap:10px;align-items:center;width:100%;padding:6px 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.vmoves li img,.vmoves li .vNo{width:34px;height:48px;object-fit:cover;border-radius:4px;background:var(--bg);flex:none}
+.vmoves .vNm{flex:1;min-width:0}.vmoves .vNm small{display:block;color:var(--muted)}
+.vmoves .vCh{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.vmoves .vCh small{display:block;color:var(--muted)}
 .hchart svg{width:100%;height:auto;display:block;overflow:visible}
 .hchart .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);font-size:.78rem;padding:5px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-115%)}
 .htable{width:100%;border-collapse:collapse;font-size:.85rem;font-variant-numeric:tabular-nums}
@@ -1365,7 +1375,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794625904";
+const BUILD = "1794626722";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3628,6 +3638,72 @@ function renderHistory(){
   const rows = H.slice(-10).reverse();
   $("#hTable").innerHTML = `<tr><th>Day</th><th>Value</th><th>Cards</th><th>Priced</th></tr>` + rows.map(h=>`<tr><td>${h.d}</td><td>${fmtCur(toDisp(h.v), curCode())}</td><td>${h.n}</td><td>${h.priced??""}</td></tr>`).join("");
 }
+// Home: the collection's value over time (one point a day, from the daily snapshots)
+let vRange = LS.get("cv-vrange") || "3m", vLoading = false;
+function homeValueChart(){
+  if(viewing) return "";
+  if(!valHist.length && !vLoading && online){ vLoading = true; getList("history").then(h=>{ valHist = h; if(view==="home") renderView(); }).catch(()=>{}); }
+  return `<div class="sect-h"><h3>Value over time</h3></div><div class="vchart" id="vChart"></div>`;
+}
+// the cards whose price moved most in the range: today's price against the last one saved before the range started
+function cardMoves(cut){
+  const list = [];
+  for(const c of myCards){
+    const h = (c.valueHist||[]).filter(x=>x && x.d && Number(x.v)>0).sort((a,b)=>a.d.localeCompare(b.d)), now = Number(c.value)||0;
+    if(h.length<2 || !now) continue;
+    const base = cut ? [...h].reverse().find(x=>x.d<=cut) || null : h[0];
+    if(!base || base.v===now) continue;
+    const q = Number(c.qty)||1; list.push({c, from: base.v, to: now, d: base.d, ch: (now-base.v)*q, pc: (now-base.v)*100/base.v});
+  }
+  if(!list.length) return `<p class="hint" style="margin:10px 0 0">No card prices changed in this range yet (each card keeps its price history from its first update).</p>`;
+  const up = list.filter(m=>m.ch>0).sort((a,b)=>b.ch-a.ch).slice(0,6), down = list.filter(m=>m.ch<0).sort((a,b)=>a.ch-b.ch).slice(0,6);
+  const row = m => { const img = cardImg(m.c);
+    return `<li><button type="button" data-vcard="${esc(m.c.id)}">${img?`<img src="${esc(cardThumb(m.c))}" alt="" loading="lazy">`:`<span class="vNo"></span>`}
+      <span class="vNm">${esc(nameOf(m.c))} #${esc(m.c.number||"")}<small>${esc([yearLabel(m.c.year), m.c.set, m.c.parallel].filter(Boolean).join(" · "))}</small></span>
+      <span class="vCh"><b class="${m.ch>0?"gain":"loss"}">${m.ch>0?"+":"−"}${money(Math.abs(m.ch))}</b><small>${money(m.from)} → ${money(m.to)} · ${m.pc>0?"+":""}${m.pc.toFixed(0)}%</small></span></button></li>`; };
+  const up$ = list.filter(m=>m.ch>0).reduce((n,m)=>n+m.ch,0), dn$ = list.filter(m=>m.ch<0).reduce((n,m)=>n+m.ch,0);
+  return `<div class="vmoves">
+    <div><h4>Biggest rises <small>· ${list.filter(m=>m.ch>0).length} cards, +${money(up$, true)}</small></h4><ol>${up.map(row).join("") || `<li><small>None</small></li>`}</ol></div>
+    <div><h4>Biggest drops <small>· ${list.filter(m=>m.ch<0).length} cards, −${money(Math.abs(dn$), true)}</small></h4><ol>${down.map(row).join("") || `<li><small>None</small></li>`}</ol></div></div>`;
+}
+function drawHomeChart(){
+  const box = $("#vChart"); if(!box) return;
+  const days = {"1m":31, "3m":92, "1y":366}[vRange], cut = days ? new Date(Date.now() - days*86400000).toISOString().slice(0,10) : "";
+  const all = valHist.filter(h=>h && h.d && Number(h.v)>=0).sort((a,b)=>a.d.localeCompare(b.d)), H = all.filter(h=>!cut || h.d>=cut);
+  const chips = `<span class="chips">${[["1m","1M"],["3m","3M"],["1y","1Y"],["all","All"]].map(([k,l])=>`<button type="button" class="chip" data-vr="${k}" aria-pressed="${vRange===k}">${l}</button>`).join("")}</span>`;
+  const now = money(collValue(), true);
+  if(H.length < 2){ box.innerHTML = `<div class="vTop"><b>${now}</b><small>${all.length<2 ? "The line starts once there are two days of data: Card Vault saves your total value once a day." : "Not enough days in this range yet."}</small>${chips}</div>${cardMoves(cut)}`; return; }
+  const W = 800, Ht = 220, L = 64, R = 14, T = 12, B = 26;
+  const vs = H.map(h=>toDisp(h.v)), lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi-lo)*0.12 || hi*0.1 || 1;
+  const y0 = Math.max(0, lo - pad), y1 = hi + pad;
+  const t0 = Date.parse(H[0].d), t1 = Date.parse(H[H.length-1].d) || t0 + 1;
+  const x = i => L + (W-L-R) * ((Date.parse(H[i].d)-t0) / Math.max(1, t1-t0)), y = v => T + (Ht-T-B) * (1 - (v-y0)/(y1-y0));
+  const ticks = [0,1,2,3].map(k=>y0 + (y1-y0)*k/3), fmt = v => fmtCur(v, curCode(), true);
+  const line = vs.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+  const area = line + ` L${x(H.length-1).toFixed(1)} ${Ht-B} L${x(0).toFixed(1)} ${Ht-B} Z`;
+  const ch = vs[vs.length-1] - vs[0], chp = vs[0] ? ch*100/vs[0] : 0;
+  const dd = d => new Date(d+"T12:00").toLocaleDateString(undefined, {day:"2-digit", month:"short", year: days && days<366 ? undefined : "numeric"});
+  box.innerHTML = `<div class="vTop"><b>${now}</b><span class="${ch>0?"gain":ch<0?"loss":""}">${ch>=0?"+":"−"}${fmtCur(Math.abs(ch), curCode(), true)} (${ch>=0?"+":"−"}${Math.abs(chp).toFixed(1)}%)</span><small>since ${dd(H[0].d)}</small>${chips}</div>
+    <div class="hchart"><svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Collection value from ${H[0].d} to ${H[H.length-1].d}: ${fmt(vs[0])} to ${fmt(vs[vs.length-1])}">
+    <defs><linearGradient id="vFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--label)" stop-opacity=".18"/><stop offset="1" stop-color="var(--label)" stop-opacity="0"/></linearGradient></defs>
+    ${ticks.map(t=>`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y(t)+4}" text-anchor="end" font-size="12" fill="var(--muted)">${fmt(t)}</text>`).join("")}
+    <text x="${L}" y="${Ht-6}" font-size="12" fill="var(--muted)">${dd(H[0].d)}</text><text x="${W-R}" y="${Ht-6}" font-size="12" fill="var(--muted)" text-anchor="end">${dd(H[H.length-1].d)}</text>
+    <path d="${area}" fill="url(#vFill)"/><path d="${line}" fill="none" stroke="var(--label)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <line id="vX" y1="${T}" y2="${Ht-B}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>
+    <circle id="vDot" r="5" fill="var(--label)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+    <rect x="${L}" y="${T}" width="${W-L-R}" height="${Ht-T-B}" fill="transparent" id="vHit"/></svg><div class="tip" id="vTip" hidden></div></div>
+    <small>Changes come from new cards and from price updates. One point a day.</small>${cardMoves(cut)}`;
+  const svg = box.querySelector("svg"), tip = $("#vTip");
+  const show = ev=>{ const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    let i = 0; for(let k=1;k<H.length;k++) if(Math.abs(x(k)-px) < Math.abs(x(i)-px)) i = k;
+    for(const id of ["vX","vDot"]) svg.getElementById(id).setAttribute("visibility","visible");
+    svg.getElementById("vX").setAttribute("x1", x(i)); svg.getElementById("vX").setAttribute("x2", x(i));
+    svg.getElementById("vDot").setAttribute("cx", x(i)); svg.getElementById("vDot").setAttribute("cy", y(vs[i]));
+    tip.hidden = false; tip.textContent = `${dd(H[i].d)} · ${fmtCur(vs[i], curCode())} · ${H[i].n} cards${H[i].priced!=null?` (${H[i].priced} priced)`:""}`;
+    tip.style.left = (x(i) * r.width / W) + "px"; tip.style.top = (y(vs[i]) * r.height / Ht) + "px"; };
+  svg.getElementById("vHit").addEventListener("pointermove", show);
+  svg.getElementById("vHit").addEventListener("pointerleave", ()=>{ tip.hidden = true; for(const id of ["vX","vDot"]) svg.getElementById(id).setAttribute("visibility","hidden"); });
+}
 async function openHistory(){ await snapshotValue(); renderHistory(); $("#scrim").hidden = $("#histDrawer").hidden = false; }
 $("#sValueW").onclick = openHistory;
 $("#sValueW").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openHistory(); } });
@@ -4339,14 +4415,18 @@ function renderHome(){
       <button type="button" class="kpi" data-go="sets"><b>${mySets.length}</b><small>Sets</small></button>
       ${bought.length?`<button type="button" class="kpi" data-go="gain"><b class="${g>0?"gain":g<0?"loss":""}">${signed(g)}</b><small>Gain / loss · ${bought.length} cards</small></button>`:""}
     </div>
+    ${homeValueChart()}
     ${recentSets.length?`<div class="sect-h"><h3>Your sets</h3><button type="button" data-go="sets">See all sets →</button></div><div class="setgrid">${recentSets.map(setTile).join("")}</div>`:""}
     ${top.length?`<div class="sect-h"><h3>Most valuable</h3><button type="button" data-go="value">See all →</button></div><div class="homegrid">${stackTiles(top)}</div>`:""}
     ${boxes.length?`<div class="sect-h"><h3>Boxes</h3><button type="button" data-go="boxes">See all boxes →</button></div><div class="setgrid">${boxes.map(boxTile).join("")}</div>`:""}
     ${trades.length?`<div class="sect-h"><h3>Trades</h3><button type="button" data-go="trades">Open trades →</button></div><div class="trd">${trades.map(t=>`<span><b>${esc(t.name)}</b> has <b>${t.get.length}</b> card${t.get.length===1?"":"s"} you don't have · you have <b>${t.give.length}</b> spare${t.give.length===1?"":"s"} ${esc(t.name)} doesn't have</span>`).join("")}</div>`:""}
     ${newest.length?`<div class="sect-h"><h3>Recently added</h3><button type="button" data-go="new">See all →</button></div><div class="homegrid">${stackTiles(newest)}</div>`:""}
     ${!C.length?`<div class="empty"><h2>${viewing?esc(viewing)+" has no cards yet":"Your binder is empty"}</h2>${viewing?"":"<p>Open <strong>Sets</strong> to find a set, then <strong>+ Add card</strong>.</p>"}</div>`:""}`;
+  drawHomeChart();
 }
 $("#vHome").addEventListener("click", e=>{
+  const vr = e.target.closest("[data-vr]"); if(vr){ vRange = vr.dataset.vr; LS.set("cv-vrange", vRange); drawHomeChart(); return; }
+  const vc = e.target.closest("[data-vcard]"); if(vc){ const c = myCards.find(x=>x.id===vc.dataset.vcard); if(c) openCardPage(c); return; }
   const go = e.target.closest("[data-go]");
   if(go){ const k = go.dataset.go;
     if(k==="sets" || k==="boxes") return setView(k);
