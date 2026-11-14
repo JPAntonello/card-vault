@@ -1353,7 +1353,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794624944";
+const BUILD = "1794625441";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4119,7 +4119,7 @@ async function renderDeep(){
   groups.sort((a,b)=>yearNum(a.s.year)-yearNum(b.s.year) || a.s.name.localeCompare(b.s.name) || (a.rows[0].par?1:0)-(b.rows[0].par?1:0) || a.sub.length-b.sub.length);   // by year, oldest first
   const total = groups.reduce((n,g)=>n+g.rows.length,0), have = groups.reduce((n,g)=>n+g.have,0);
   box.innerHTML = !groups.length ? `<p class="hint">Nothing called “${esc(deepQ)}” in ${sp.scope==="mine"?"your sets. Try <b>Whole library</b>.":"the library."}</p>`
-    : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b></p>` +
+    : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b>${viewing?"":` <button type="button" class="chip" id="deepGoal" title="One goal with every card of this search, in every set of the library (sets added later count too)">🎯 Make “${esc(deepQ.trim())}” a goal · every set</button>`}</p>` +
       groups.slice(0, deepN).map(g=>`<section class="dg">${viewing?"":`<button type="button" class="chip dgGoal" data-gset="${esc(g.s.id)}" data-gsub="${esc(g.rows[0].par ? "" : g.sub)}" data-gpar="${esc(g.rows[0].par ? g.rows[0].par.sid : "")}" data-gq="${esc(g.rows.length < goalBase(g.s.id, g.rows[0].par ? "" : g.sub, g.rows[0].par ? g.rows[0].par.sid : "") ? deepQ.trim() : "")}" title="Track this checklist on Home">🎯 Goal</button>`}
         <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
           <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
@@ -4128,6 +4128,7 @@ async function renderDeep(){
 }
 $("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; deepN = 60; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
 $("#spDeepRes").addEventListener("click", e=>{ if(e.target.id==="deepMore"){ deepN += 60; renderDeep(); return; }
+  if(e.target.id==="deepGoal"){ addGoal({setId:"*", q:deepQ}); return; }
   const gb = e.target.closest("[data-gset]"); if(gb){ addGoal({setId:gb.dataset.gset, sub:gb.dataset.gsub, par:gb.dataset.gpar, q:gb.dataset.gq}); return; }
   const b = e.target.closest("[data-dset]"); if(!b) return;
   openSetPage(b.dataset.dset); if(b.dataset.dsub){ filt.sub = b.dataset.dsub; filt.cl = "all"; saveFilt(); render(); } });
@@ -4184,12 +4185,13 @@ function goalBase(setId, sub, par){ const cat = catalogs[setId]; if(!cat) return
   if(par){ const p = cat.parBySid.get(String(par)); return p ? p.cards.length : 0; }
   return cat.cards.filter(e=>!sub || (e.sub||"Base")===sub).length; }
 function goalName(g){
+  if(g.setId==="*") return `All “${g.q}” cards · every set`;
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId], p = g.par && cat && cat.parBySid.get(String(g.par));
   return [s ? `${yearLabel(s.year)} ${s.name}` : "Set", p ? `${p.parent} · ${parLabel(p)}` : g.sub || "", g.q ? `“${g.q}”` : ""].filter(Boolean).join(" · ");
 }
 async function addGoal(g){
   if(viewing) return;
-  if(!catalogs[g.setId]) await loadCatalog(g.setId).catch(()=>null);
+  if(g.setId==="*") await loadAllCatalogs(); else if(!catalogs[g.setId]) await loadCatalog(g.setId).catch(()=>null);
   g = {id: "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay()};
   g.name = goalName(g);
   if(goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q))){ toast("That's already one of your goals (on Home)"); return; }
@@ -4197,16 +4199,22 @@ async function addGoal(g){
 }
 // every card of a goal, whether you have it, a price to expect and which friend has a spare
 function goalRows(g){
+  if(g.setId==="*"){   // one search across every set in the library ("golazo"): each set's matching base / insert cards
+    const all = sets.filter(x=>x.status==="ready" && catalogs[x.id]), rows = [];
+    if(!all.length) return null;
+    for(const s of all){ const r = goalRows({...g, setId:s.id, sub:"", par:"", _all:true}); if(r) rows.push(...r.rows); }
+    return {s:null, cat:null, rows, sets: new Set(rows.map(x=>x.s.id)).size};
+  }
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId]; if(!s || !cat) return null;
   const mine = myCards.filter(c=>c.setId===s.id || (!c.setId && setKey(c)===setKeyOf(s)));
   const was = cards; cards = mine;   // ownership() reads the binder's cards: count only yours
   let rows;
   try{
-    const w = goalWords(g.q), hit = e => !w.length || w.every(x=>norm([e.sub||"Base", e.player, e.team, e.n, e.rc?"rookie rc":""].join(" ")).includes(x));
+    const w = goalWords(g.q), hit = e => !w.length || w.every(x=>norm([e.sub||"Base", e.player, e.team, e.n, e.rc?"rookie rc":"", g._all ? s.name : ""].join(" ")).includes(x));
     if(g.par){ const p = cat.parBySid.get(String(g.par)); if(!p) return null; const own = parOwnership(s, p);
-      rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, have: (own.get(pkey(n,pl))||[]).length} : null; }).filter(Boolean); }
+      rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, s, cat, have: (own.get(pkey(n,pl))||[]).length} : null; }).filter(Boolean); }
     else { const own = ownership(s, cat);
-      rows = cat.cards.map((e,i)=>(!g.sub || (e.sub||"Base")===g.sub) && hit(e) ? {e, p:null, have:(own.get(i)||[]).length} : null).filter(Boolean); }
+      rows = cat.cards.map((e,i)=>(!g.sub || (e.sub||"Base")===g.sub) && hit(e) ? {e, p:null, s, cat, have:(own.get(i)||[]).length} : null).filter(Boolean); }
   } finally { cards = was; }
   return {s, cat, rows};
 }
@@ -4227,23 +4235,23 @@ function goalSpares(s, e, p){
   return friends.filter(f=>(f.cards||[]).filter(c=>!c.gone && sameCard(c, s, e, p)).reduce((n,c)=>n+(Number(c.qty)||1),0) >= 2).map(f=>f.name);
 }
 function goalsHTML(){
-  const need = [...new Set(goals.map(g=>g.setId))].filter(id=>!catalogs[id] && sets.some(s=>s.id===id && s.status==="ready"));
+  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId]))].filter(id=>!catalogs[id] && sets.some(s=>s.id===id && s.status==="ready"));
   if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="home") renderView(); }); }
-  if(!goals.length) return `<div class="sect-h"><h3>Goals</h3></div><p class="hint">No goals yet. Open a set and tap <b>🎯 Make this a goal</b> (pick an insert or parallel first to track just that), or search on <b>Sets</b> (e.g. “golazo” or “manchester united rookie”) and tap <b>🎯 Goal</b> on a checklist.</p>`;
+  if(!goals.length) return `<div class="sect-h"><h3>Goals</h3></div><p class="hint">No goals yet. Open a set and tap <b>🎯 Make this a goal</b> (pick an insert or parallel first to track just that). Or search on <b>Sets</b> (e.g. “golazo”) and tap <b>🎯 Make “golazo” a goal · every set</b> for every card of it across all sets, or <b>🎯 Goal</b> on one checklist.</p>`;
   const tiles = goals.map(g=>{
     const r = goalRows(g);
-    if(!r) return `<div class="goal"><div class="gTop"><b>${esc(g.name)}</b></div><small>${need.includes(g.setId)?"Loading checklist…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
+    if(!r) return `<div class="goal"><div class="gTop"><b>${esc(g.name)}</b></div><small>${need.length?"Loading checklists…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
     const have = r.rows.filter(x=>x.have).length, total = r.rows.length, miss = r.rows.filter(x=>!x.have);
-    const priced = miss.map(x=>({...x, price: goalPrice(r.s, r.cat, x.e, x.p), spare: goalSpares(r.s, x.e, x.p)}));
+    const priced = miss.map(x=>({...x, price: goalPrice(x.s, x.cat, x.e, x.p), spare: goalSpares(x.s, x.e, x.p)}));
     const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), est = known.some(x=>x.price.est);
     priced.sort((a,b)=>(a.price?a.price.v:1e9)-(b.price?b.price.v:1e9) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
     const spares = priced.filter(x=>x.spare.length).length, open = goalOpen.has(g.id);
     return `<div class="goal">
-      <div class="gTop"><b>${esc(g.name)}</b><span class="gNum">${have}/${total}</span></div>
+      <div class="gTop"><b>${esc(g.name)}</b><span class="gNum">${have}/${total}</span></div>${g.setId==="*"?`<small>${r.sets} set${r.sets===1?"":"s"} in the library · new sets count automatically</small>`:""}
       <div class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></div>
       ${have>=total && total ? `<span class="gDone">Complete! 🎉</span>` : `<small>${pctTxt(have,total)} · missing ${miss.length}${known.length?` · ${est||known.length<miss.length?"≈ ":""}${money(cost, true)} to finish${known.length<miss.length?` (${miss.length-known.length} without a price)`:""}`:""}${spares?` · friends have ${spares} spare${spares===1?"":"s"}`:""}</small>`}
-      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" aria-pressed="${open}">${open?"Hide missing":"Missing cards"}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">Open checklist</button><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
-      ${open ? `<ul>${priced.slice(0,200).map(x=>`<li><span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?`${x.price.est?"~":""}${money(x.price.v)}`:"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: your or a friend's copy of the card; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
+      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" aria-pressed="${open}">${open?"Hide missing":"Missing cards"}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
+      ${open ? `<ul>${priced.slice(0,200).map(x=>`<li><span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${g.setId==="*"?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?`${x.price.est?"~":""}${money(x.price.v)}`:"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: your or a friend's copy of the card; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
     </div>`;
   }).join("");
   return `<div class="sect-h"><h3>Goals</h3></div><div class="goals">${tiles}</div>`;
@@ -4255,6 +4263,7 @@ function goalClick(e){
     if(goalDel!==id){ goalDel = id; renderView(); setTimeout(()=>{ if(goalDel===id){ goalDel = ""; if(view==="home") renderView(); } }, 4000); return true; }
     goalDel = ""; saveGoals(list=>list.filter(g=>g.id!==id)).then(()=>toast("Goal removed")).catch(err=>toast("Couldn't remove it: " + (err?.message||err))); return true; }
   const g = goals.find(x=>x.id===t.dataset.gset2); if(!g) return true;
+  if(g.setId==="*"){ setView("sets"); sp.scope = "all"; saveSp(); renderSetsPage(); $("#spDeep").value = deepQ = g.q; deepN = 60; renderDeep(); return true; }
   openSetPage(g.setId); filt.sub = g.par ? "par:" + g.par : g.sub || ""; filt.cl = "missing"; saveFilt(); render(); return true;
 }
 $("#clGoal").onclick = ()=>{ const a = activeSet(); if(!a) return;
