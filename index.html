@@ -1375,7 +1375,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794626794";
+const BUILD = "1794628700";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3077,7 +3077,9 @@ const scpCan = c => c.scpUrl ? !(c.scpTried && Date.now()-Date.parse(c.scpTried)
 const scpNeed = () => { const w = new Set(lsList("cv-130list")), l = toPrice().filter(c=>scpCan(c) && (c.scpNew || !w.has(c.id)) && !needPhoto(c)), s = new Set(l);
   // cards with a SportsCardsPro page and no photo: the same run brings the photo (their price is refreshed too)
   return [...l, ...myCards.filter(c=>c.scpUrl && !s.has(c) && priceable(c) && wantsScpPic(c) && !(c.scpPicTried && Date.now()-Date.parse(c.scpPicTried) < 7*DAY))]; };   // its own wait: other photo searches do not count   // a newly linked page is read first
-const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scpNeed()); return toPrice().filter(c=>!s.has(c) && !c.scpReview && (w.has(c.id) || !scpCan(c))); };
+const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scpNeed()); return toPrice().filter(c=>!s.has(c) && !c.scpReview && !hasScpPrice(c) && (w.has(c.id) || !scpCan(c))); };
+// SportsCardsPro comes first: a card priced from its SportsCardsPro page is never re-priced from eBay sales
+const hasScpPrice = c => c.valueSource==="SportsCardsPro" && Number(c.value)>0;
 function priceScp(list){
   if(!list.length) return;
   LS.set("cv-findPrice", JSON.stringify(list.map(c=>c.id)));
@@ -3113,7 +3115,7 @@ function price130(list){
 }
 const keepManual = () => LS.get("cv-keepManual")==="1";
 function toPrice(){ const w = new Set(lsList("cv-130list"));
-  return myCards.filter(c=>priceable(c) && (c.scpNew || (!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried) && !(Number(c.value)>0 && recent(c.valueDate))))) || needPhoto(c))); }
+  return myCards.filter(c=>priceable(c) && (c.scpNew || (c.scpUrl && c.valueSource==="eBay sold" && scpCan(c)) || (!(keepManual() && c.valueSource==="Manual") && (stalePrice(c) || (w.has(c.id) && !recent(c.priceTried) && !(Number(c.value)>0 && recent(c.valueDate))))) || needPhoto(c))); }
 // new cards (no price) first, then the most valuable; at most 100 per run so 130point does not block the searches
 const RUN_MAX = 100;
 const byPriority = (a,b) => ((b.priceAlt===1) - (a.priceAlt===1)) || ((Number(a.value)>0) - (Number(b.value)>0)) || (Number(b.value)||0) - (Number(a.value)||0);
@@ -3389,7 +3391,8 @@ async function applyPriceResults(site, results){
     : scpNone.has(c.id) ? {...c, scpNone: day}
     // the search brought nothing at all (often a blocked or slowed-down search): it is tried again in 3 days, not 30
     : scpEmpty.has(c.id) ? {...c, scpNone: new Date(Date.now() - (SCP_RETRY-3)*DAY).toISOString().slice(0,10)} : c;
-  await commit("cards", all=>all.map(scpKeep).map(withPic).map(scpF).map(c=> upd.has(c.id) && !(keepManual() && c.valueSource==="Manual")
+  if(site==="130point") for(const c of myCards) if(hasScpPrice(c)){ upd.delete(c.id); miss.delete(c.id); review.delete(c.id); }
+  await commit("cards", all=>all.map(scpKeep).map(withPic).map(scpF).map(c=> upd.has(c.id) && !(keepManual() && c.valueSource==="Manual") && !(site==="130point" && hasScpPrice(c))
     ? {...c, value: upd.get(c.id).value, valueDate: day, valueSource: upd.get(c.id).src, valueNote: upd.get(c.id).note, valueUrl: upd.get(c.id).url||"", valueSales: upd.get(c.id).sales||[], priceTried:"", priceAlt:0, review: null, rejSales: [],
        ...(site==="130point" && !c.image && !c.photo && !c.noSalePic && salePic(upd.get(c.id).img) ? {image: salePic(upd.get(c.id).img), imageSource:"Sale", replacePhoto: !!c.tcdbFile} : {})}
     : review.has(c.id) ? {...c, priceTried: day, priceAlt:0, review: reviewOf(review.get(c.id))}
