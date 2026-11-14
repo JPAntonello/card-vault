@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794673753";
+const BUILD = "1794684602";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1758,7 +1758,7 @@ function renderCards(){
   $("#sportChips").innerHTML = sports.map(s=>`<button type="button" class="chip" aria-pressed="${s===sportFilter}" data-sport="${esc(s)}">${esc(s)}</button>`).join("");
 
   $("#empty").hidden = cards.length>0 || !online || !!viewing;
-  if(viewing && !cards.length){ $("#grid").innerHTML = `<p class="hint">${esc(viewing)} has no cards yet.</p>`; return; }
+  if(viewing && !cards.length){ gridParts = []; $("#grid").innerHTML = `<p class="hint">${esc(viewing)} has no cards yet.</p>`; return; }
   const aset = activeSet(), cat = aset && catalogs[aset.id];
   $("#clBar").hidden = !aset;
   if(aset && !cat){ loadCatalog(aset.id).then(render).catch(()=>{}); $("#clTitle").textContent = setKeyOf(aset); $("#clCount").textContent = "Loading checklist…"; }
@@ -1785,7 +1785,7 @@ function renderCards(){
       $("#clProg").style.width = pct(W.size - tiles.length, W.size) + "%";
       $("#fCount").textContent = `Want list: ${tiles.length}`; $("#fClear").hidden = false;
       $("#noMatch").hidden = true;
-      $("#grid").innerHTML = tiles.join("") || `<p class="hint">No cards on the want list for this set. Open Full checklist or Missing and tap ☆ on the cards you are hunting.</p>`;
+      gridParts = tiles; $("#grid").innerHTML = tiles.join("") || `<p class="hint">No cards on the want list for this set. Open Full checklist or Missing and tap ☆ on the cards you are hunting.</p>`;
       return;
     }
     if(selPar){
@@ -1802,11 +1802,11 @@ function renderCards(){
           (!q || [e.player,e.team,e.n].join(" ").toLowerCase().includes(q)));
         $("#fCount").textContent = `${filt.cl==="missing"?"Missing":"Checklist"}: ${rows.length} card${rows.length===1?"":"s"}`;
         $("#fClear").hidden = false; $("#noMatch").hidden = rows.length>0;
-        $("#grid").innerHTML = rows.map(({k,e}) => pown.has(k) ? stackTiles(pown.get(k)) : ghostTile(e, cat.cards.indexOf(e), selPar)).join("");
+        setGrid(rows.map(({k,e}) => pown.has(k) ? stackTiles(pown.get(k)) : ghostTile(e, cat.cards.indexOf(e), selPar)));
         return;
       }
       list.splice(0, list.length, ...list.filter(c=>String(c.parallelSid||"")===String(selPar.sid)));
-      $("#grid").innerHTML = stackTiles(list);
+      setGrid(stackTileParts(list));
       $("#noMatch").hidden = list.length>0;
       return;
     }
@@ -1831,12 +1831,12 @@ function renderCards(){
       $("#fClear").hidden = false;
       $("#noMatch").hidden = rows.length>0;
       const plainFirst = (a,b) => (a.variant?1:0) - (b.variant?1:0);
-      $("#grid").innerHTML = rows.map(({e,i}) => { const mine = own.get(i); return mine ? stackTiles([...mine].sort(plainFirst)) : ghostTile(e,i); }).join("");
+      setGrid(rows.map(({e,i}) => { const mine = own.get(i); return mine ? stackTiles([...mine].sort(plainFirst)) : ghostTile(e,i); }));
       return;
     }
     if(filt.sub){ const keep = new Set([...own].filter(([i])=>inSub(cat.cards[i])).flatMap(([,cs])=>cs)); list.splice(0, list.length, ...list.filter(c=>keep.has(c))); }
   }
-  $("#grid").innerHTML = stackTiles(list);
+  setGrid(stackTileParts(list));
 }
 /* ---------- picking several checklist cards to add at once ---------- */
 let pickMode = false, picked = new Map(), pickSetId = "";
@@ -1871,14 +1871,34 @@ function ghostTile(e, i, p){
       </div></button>`;
 }
 // the same card entered more than once (bought in different places/prices) shows as one tile with ×N
-function stackTiles(list){
+function stackTileParts(list){
   const groups = new Map();
   for(const c of list){ const k = c.k || dupKey(c); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(c); }
   return [...groups.values()].map(g=>{
     if(g.length===1) return cardTile(g[0]);
     const lead = g.find(c=>c.photo||c.image) || g[0];
     return cardTile(lead, g.reduce((n,c)=>n+(Number(c.qty)||1),0), g);
-  }).join("");
+  });
+}
+const stackTiles = list => stackTileParts(list).join("");
+// the grid is drawn in pieces: the first tiles now, the next ones as you scroll near the end (keeps memory low on big collections)
+const GRID_STEP = 120; let gridParts = [], gridShown = 0, gridObs = null;
+function setGrid(parts){
+  const g = $("#grid"); gridParts = parts; gridShown = Math.min(parts.length, GRID_STEP);
+  g.innerHTML = parts.slice(0, gridShown).join("") + (gridShown < parts.length ? `<div id="gridMore" style="grid-column:1/-1;height:1px"></div>` : "");
+  if(gridShown < parts.length) watchGridEnd();
+}
+function watchGridEnd(){
+  if(!("IntersectionObserver" in window)){ while(gridShown < gridParts.length) moreGrid(); return; }
+  gridObs = gridObs || new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)) moreGrid(); }, {rootMargin: "1500px 0px"});
+  gridObs.disconnect(); const m = $("#gridMore"); if(m) gridObs.observe(m);
+}
+function moreGrid(){
+  const m = $("#gridMore"); if(!m) return;
+  const next = gridParts.slice(gridShown, gridShown + GRID_STEP); gridShown += next.length;
+  m.insertAdjacentHTML("beforebegin", next.join(""));
+  if(gridShown >= gridParts.length){ m.remove(); gridObs && gridObs.disconnect(); }
+  else watchGridEnd();
 }
 function cardTile(c, totalQty, group){
   const qty = totalQty ?? Number(c.qty);
@@ -3768,7 +3788,7 @@ $("#selPrice").onclick = ()=>{
 $("#selBtn").onclick = ()=>{ selMode = !selMode; if(!selMode) selIds = new Set(); render(); renderSelBar(); };
 $("#selDone").onclick = ()=>{ selMode = false; selIds = new Set(); render(); renderSelBar(); };
 $("#selClear").onclick = ()=>{ selIds = new Set(); render(); renderSelBar(); };
-$("#selAll").onclick = ()=>{ for(const el of document.querySelectorAll("#grid .slab[data-id]")) selIds.add(el.dataset.id); render(); renderSelBar(); };
+$("#selAll").onclick = ()=>{ for(const h of gridParts) for(const m of String(h).matchAll(/data-id="([^"]+)"/g)) selIds.add(m[1]); render(); renderSelBar(); };
 $("#selEdit").onclick = ()=>{
   if(!selIds.size) return;
   $("#mf").reset(); $("#mMsg").hidden = true;
