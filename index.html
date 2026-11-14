@@ -1375,7 +1375,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794628853";
+const BUILD = "1794655971";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();

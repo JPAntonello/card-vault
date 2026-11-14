@@ -1076,5 +1076,16 @@
     "count": 640,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/675437/2026-Topps-Chrome-MLS",
     "note": "TCDB: 2026 Topps Chrome MLS · 22 subsets · 121 parallels"
+  },
+  {
+    "id": "mvselect1617",
+    "year": "2016/17",
+    "name": "Panini Select",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-14T11:32:42.000Z",
+    "count": 692,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/137759/2016-17-Panini-Select",
+    "note": "TCDB: 2016 17 Panini Select · 12 subsets · 75 parallels"
   }
 ]
