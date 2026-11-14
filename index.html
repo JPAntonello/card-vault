@@ -1375,7 +1375,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794656482";
+const BUILD = "1794656546";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4863,6 +4863,9 @@ function scpLinkSection(){
 }
 function goalTidySection(){
   if(!goals.length || viewing) return "";
+  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(x=>x.status==="ready").map(x=>x.id) : [g.setId]))].filter(id=>!catalogs[id] && sets.some(x=>x.id===id && x.status==="ready"));
+  if(need.length){ if(!goalTidySection.busy){ goalTidySection.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalTidySection.busy = false; if(view==="tidy") renderTidy(); }); }
+    return `<section><h3>Goals</h3><p class="hint">Loading your goals' checklists…</p></section>`; }
   const all = goalMissingCards(); if(!all.length) return "";
   const sN = goalScpList().length, pN = goal130List().length, priced = all.filter(c=>Number((goalPrices[c.id.slice(2)]||{}).v)>0).length;
   return `<section><h3>Goals <span>${sN ? `<button type="button" class="btn" id="tdGoalScp" title="Prices of the cards you are missing for your goals, from SportsCardsPro">SportsCardsPro (${Math.min(sN, SCP_MAX)})</button>` : ""}${pN ? ` <button type="button" class="btn" id="tdGoal130" title="eBay sales on 130point, for missing cards SportsCardsPro has no price for">130point (${Math.min(pN, RUN_MAX)})</button>` : ""}${!sN && !pN ? `<span class="ok">✓ Searched this week</span>` : ""}</span></h3>
