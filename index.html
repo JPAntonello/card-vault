@@ -419,6 +419,16 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 .bklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .bklist li{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.88rem}
 .trd{display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.goals{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start}
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.goal .gTop{display:flex;gap:8px;align-items:baseline}.goal .gTop b{flex:1;min-width:0}
+.goal .gNum{font-variant-numeric:tabular-nums;font-weight:700}.goal .gDone{color:var(--ok);font-weight:700}
+.goal small{color:var(--muted)}.goal .gActs{display:flex;flex-wrap:wrap;gap:6px}.goal .gActs .chip{font-size:12px;padding:3px 10px}
+.goal ul{list-style:none;margin:2px 0 0;padding:0;max-height:320px;overflow:auto}
+.goal li{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
+.goal li .gN{min-width:54px;color:var(--muted);font-variant-numeric:tabular-nums}.goal li .gP{flex:1;min-width:0}.goal li .gV{font-variant-numeric:tabular-nums;white-space:nowrap}
+.goal li .gF{display:block;color:var(--label);font-size:12px}
+#spDeepRes .dgGoal{float:right;margin:6px 10px 0 0;font-size:12px;padding:2px 10px}
 /* phones: the sections menu at the bottom, bigger touch targets */
 @media (max-width:640px){
   .wrap>.nav{position:fixed;left:0;right:0;bottom:0;z-index:18;margin:0;border-radius:0;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--surface)}
@@ -550,7 +560,7 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
   </div>
   <section class="cl" id="clBar" hidden aria-label="Set checklist">
     <div class="cl-banner" id="clBanner"></div>
-    <div class="cl-acts"><button type="button" class="chip" id="clBack">← All sets</button><button type="button" class="chip" id="clAdd">+ Add a card from this set</button><button type="button" class="chip" id="clCover">Change cover</button><button type="button" class="chip" id="clMissing" title="Copy the list of cards you still need from this set">Copy missing list</button><input type="file" id="coverFile" accept="image/*" hidden></div>
+    <div class="cl-acts"><button type="button" class="chip" id="clBack">← All sets</button><button type="button" class="chip" id="clAdd">+ Add a card from this set</button><button type="button" class="chip" id="clCover">Change cover</button><button type="button" class="chip" id="clMissing" title="Copy the list of cards you still need from this set">Copy missing list</button><button type="button" class="chip" id="clGoal" title="Track how much of this set (or the insert / parallel picked below) you have">🎯 Make this a goal</button><input type="file" id="coverFile" accept="image/*" hidden></div>
     <div class="cl-top"><b id="clTitle"></b><span id="clCount"></span></div>
     <div class="prog" aria-hidden="true"><i id="clProg"></i></div>
     <div class="bar">
@@ -1020,7 +1030,7 @@ const NOT_ONLINE = {ok:false, error:"Not available in the online version."};
 async function api(url, method, rawBody){
   const u = new URL(url, location.href), p = u.pathname.replace(/^.*?\/api\//, "/api/");
   let m;
-  if((m = p.match(/^\/api\/(cards|history|sources|wants)$/))){
+  if((m = p.match(/^\/api\/(cards|history|sources|wants|goals)$/))){
     if(method === "GET") return J(await getDoc(m[1], []) || []);
     if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400);
       try{ await putDoc(m[1], list, true); }catch(e){ if(e instanceof Stale) return T("Changed in another tab", 409); throw e; } return N(); }
@@ -1343,7 +1353,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794623017";
+const BUILD = "1794624944";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1469,12 +1479,16 @@ async function commit(name, change, tries){
     next = next.map(c=>{ if(before.has(c.id) || Number(c.value)>0) return c; const k = known.get(dupKey(c));
       return k ? {...c, value:k.value, valueDate:k.valueDate, valueSource:k.valueSource, valueNote:k.valueNote, valueUrl:k.valueUrl||"", valueSales:k.valueSales||[]} : c; });
   }
+  const gBefore = name==="cards" && !viewing ? goalCounts() : null;
   const r = await fetch("/api/"+name, {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(next, null, 1)});
   // another Card Vault tab (or device) saved in the meantime: apply this change again on top of its version
   if(r.status===409 && (tries||0) < 3) return commit(name, change, (tries||0) + 1);
   if(!r.ok) throw new Error(await r.text() || "save failed");
   if(name==="cards"){ allCards = next; myCards = next.filter(c=>!c.gone); if(!viewing) cards = goneView ? next.filter(c=>c.gone) : myCards; queueSnapshot(); } else sets = next;
   render(); renderSets(); renderPhotoBar(); renderPriceBar();
+  if(gBefore){ const after = goalCounts(), up = goals.filter(g=>after.has(g.id) && gBefore.has(g.id) && after.get(g.id).have > gBefore.get(g.id).have);
+    if(up.length){ const g = up[0], a = after.get(g.id), d = a.have - gBefore.get(g.id).have;
+      setTimeout(()=>toast(`🎯 +${d} toward ${g.name} · ${a.have}/${a.total}${a.have>=a.total?" · complete!":""}${up.length>1?` (and ${up.length-1} more goal${up.length>2?"s":""})`:""}`), 2500); } }
 }
 async function loadCatalog(id){
   if(catalogs[id]) return catalogs[id];
@@ -4106,7 +4120,7 @@ async function renderDeep(){
   const total = groups.reduce((n,g)=>n+g.rows.length,0), have = groups.reduce((n,g)=>n+g.have,0);
   box.innerHTML = !groups.length ? `<p class="hint">Nothing called “${esc(deepQ)}” in ${sp.scope==="mine"?"your sets. Try <b>Whole library</b>.":"the library."}</p>`
     : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b></p>` +
-      groups.slice(0, deepN).map(g=>`<section class="dg">
+      groups.slice(0, deepN).map(g=>`<section class="dg">${viewing?"":`<button type="button" class="chip dgGoal" data-gset="${esc(g.s.id)}" data-gsub="${esc(g.rows[0].par ? "" : g.sub)}" data-gpar="${esc(g.rows[0].par ? g.rows[0].par.sid : "")}" data-gq="${esc(g.rows.length < goalBase(g.s.id, g.rows[0].par ? "" : g.sub, g.rows[0].par ? g.rows[0].par.sid : "") ? deepQ.trim() : "")}" title="Track this checklist on Home">🎯 Goal</button>`}
         <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
           <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
         <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span><span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
@@ -4114,6 +4128,7 @@ async function renderDeep(){
 }
 $("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; deepN = 60; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
 $("#spDeepRes").addEventListener("click", e=>{ if(e.target.id==="deepMore"){ deepN += 60; renderDeep(); return; }
+  const gb = e.target.closest("[data-gset]"); if(gb){ addGoal({setId:gb.dataset.gset, sub:gb.dataset.gsub, par:gb.dataset.gpar, q:gb.dataset.gq}); return; }
   const b = e.target.closest("[data-dset]"); if(!b) return;
   openSetPage(b.dataset.dset); if(b.dataset.dsub){ filt.sub = b.dataset.dsub; filt.cl = "all"; saveFilt(); render(); } });
 
@@ -4152,6 +4167,99 @@ $("#bxGrid").onclick = e=>{ const t = e.target.closest("[data-box]"); if(!t) ret
   filt = {set:"", team:"", player:"", from:"", box:t.dataset.box, flags:[], cl:"mine", sub:""}; sportFilter = "All"; $("#q").value = ""; saveFilt(); setView("cards"); render(); };
 $("#bxOpen").onclick = ()=>$("#openBoxBtn").click();
 
+/* ---------- goals: a set, insert, parallel or search to complete, with progress and the cost to finish ---------- */
+// a goal: {id, setId, sub ("" = the whole set), par (a parallel's sid), q (search words, e.g. "manchester united"), name, made}
+let goals = [], goalOpen = new Set(), goalDel = "";
+async function loadGoals(){ try{ goals = await getList("goals"); }catch{ goals = []; } if(view==="home") renderView(); }
+async function saveGoals(change, tries){
+  const base = await getList("goals").catch(()=>goals), next = change(base);
+  const r = await fetch("/api/goals", {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(next, null, 1)});
+  if(r.status===409 && (tries||0) < 3) return saveGoals(change, (tries||0)+1);
+  if(!r.ok) throw new Error(await r.text() || "save failed");
+  goals = next; if(view==="home") renderView();
+}
+const goalWords = q => norm(q||"").split(/\s+/).filter(Boolean);
+// how many cards the checklist part has before the search words (to know whether the words narrow it)
+function goalBase(setId, sub, par){ const cat = catalogs[setId]; if(!cat) return 0;
+  if(par){ const p = cat.parBySid.get(String(par)); return p ? p.cards.length : 0; }
+  return cat.cards.filter(e=>!sub || (e.sub||"Base")===sub).length; }
+function goalName(g){
+  const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId], p = g.par && cat && cat.parBySid.get(String(g.par));
+  return [s ? `${yearLabel(s.year)} ${s.name}` : "Set", p ? `${p.parent} · ${parLabel(p)}` : g.sub || "", g.q ? `“${g.q}”` : ""].filter(Boolean).join(" · ");
+}
+async function addGoal(g){
+  if(viewing) return;
+  if(!catalogs[g.setId]) await loadCatalog(g.setId).catch(()=>null);
+  g = {id: "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay()};
+  g.name = goalName(g);
+  if(goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q))){ toast("That's already one of your goals (on Home)"); return; }
+  try{ await saveGoals(list=>[...list, g]); toast(`🎯 Goal added: ${g.name} · see it on Home`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); }
+}
+// every card of a goal, whether you have it, a price to expect and which friend has a spare
+function goalRows(g){
+  const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId]; if(!s || !cat) return null;
+  const mine = myCards.filter(c=>c.setId===s.id || (!c.setId && setKey(c)===setKeyOf(s)));
+  const was = cards; cards = mine;   // ownership() reads the binder's cards: count only yours
+  let rows;
+  try{
+    const w = goalWords(g.q), hit = e => !w.length || w.every(x=>norm([e.sub||"Base", e.player, e.team, e.n, e.rc?"rookie rc":""].join(" ")).includes(x));
+    if(g.par){ const p = cat.parBySid.get(String(g.par)); if(!p) return null; const own = parOwnership(s, p);
+      rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, have: (own.get(pkey(n,pl))||[]).length} : null; }).filter(Boolean); }
+    else { const own = ownership(s, cat);
+      rows = cat.cards.map((e,i)=>(!g.sub || (e.sub||"Base")===g.sub) && hit(e) ? {e, p:null, have:(own.get(i)||[]).length} : null).filter(Boolean); }
+  } finally { cards = was; }
+  return {s, cat, rows};
+}
+function goalCounts(){ const m = new Map(); for(const g of goals){ const r = goalRows(g); if(r) m.set(g.id, {have: r.rows.filter(x=>x.have).length, total: r.rows.length}); } return m; }
+// copies of a checklist card in a list of cards (same set, number, player and version)
+const sameCard = (c, s, e, p) => (c.setId===s.id) && normNum(c.number)===normNum(e.n) && (!e.player || pnk(c.player)===pnk(e.player)) && (p ? String(c.parallelSid||"")===String(p.sid) : !c.parallelSid);
+function goalPrice(s, cat, e, p){
+  const pool = [...myCards, ...allCards.filter(c=>c.gone), ...friends.flatMap(f=>f.cards||[])].filter(c=>Number(c.value)>0 && c.setId===s.id);
+  const exact = pool.filter(c=>sameCard(c, s, e, p));
+  if(exact.length) return {v: Number(exact[0].value), est:false};
+  // otherwise: the middle price of the cards of the same insert / parallel you and your friends have priced
+  const subOf = c => { const es = cat.byNum.get(normNum(c.number))||[]; const x = es.find(y=>pnk(y.player)===pnk(c.player)) || es[0]; return x ? (x.sub||"Base") : ""; };
+  const like = pool.filter(c=>p ? String(c.parallelSid||"")===String(p.sid) : !c.parallelSid && subOf(c)===(e.sub||"Base")).map(c=>Number(c.value)).sort((a,b)=>a-b);
+  if(!like.length) return null;
+  return {v: like.length%2 ? like[like.length>>1] : (like[like.length/2-1]+like[like.length/2])/2, est:true};
+}
+function goalSpares(s, e, p){
+  return friends.filter(f=>(f.cards||[]).filter(c=>!c.gone && sameCard(c, s, e, p)).reduce((n,c)=>n+(Number(c.qty)||1),0) >= 2).map(f=>f.name);
+}
+function goalsHTML(){
+  const need = [...new Set(goals.map(g=>g.setId))].filter(id=>!catalogs[id] && sets.some(s=>s.id===id && s.status==="ready"));
+  if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="home") renderView(); }); }
+  if(!goals.length) return `<div class="sect-h"><h3>Goals</h3></div><p class="hint">No goals yet. Open a set and tap <b>🎯 Make this a goal</b> (pick an insert or parallel first to track just that), or search on <b>Sets</b> (e.g. “golazo” or “manchester united rookie”) and tap <b>🎯 Goal</b> on a checklist.</p>`;
+  const tiles = goals.map(g=>{
+    const r = goalRows(g);
+    if(!r) return `<div class="goal"><div class="gTop"><b>${esc(g.name)}</b></div><small>${need.includes(g.setId)?"Loading checklist…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
+    const have = r.rows.filter(x=>x.have).length, total = r.rows.length, miss = r.rows.filter(x=>!x.have);
+    const priced = miss.map(x=>({...x, price: goalPrice(r.s, r.cat, x.e, x.p), spare: goalSpares(r.s, x.e, x.p)}));
+    const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), est = known.some(x=>x.price.est);
+    priced.sort((a,b)=>(a.price?a.price.v:1e9)-(b.price?b.price.v:1e9) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
+    const spares = priced.filter(x=>x.spare.length).length, open = goalOpen.has(g.id);
+    return `<div class="goal">
+      <div class="gTop"><b>${esc(g.name)}</b><span class="gNum">${have}/${total}</span></div>
+      <div class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></div>
+      ${have>=total && total ? `<span class="gDone">Complete! 🎉</span>` : `<small>${pctTxt(have,total)} · missing ${miss.length}${known.length?` · ${est||known.length<miss.length?"≈ ":""}${money(cost, true)} to finish${known.length<miss.length?` (${miss.length-known.length} without a price)`:""}`:""}${spares?` · friends have ${spares} spare${spares===1?"":"s"}`:""}</small>`}
+      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" aria-pressed="${open}">${open?"Hide missing":"Missing cards"}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">Open checklist</button><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
+      ${open ? `<ul>${priced.slice(0,200).map(x=>`<li><span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?`${x.price.est?"~":""}${money(x.price.v)}`:"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: your or a friend's copy of the card; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
+    </div>`;
+  }).join("");
+  return `<div class="sect-h"><h3>Goals</h3></div><div class="goals">${tiles}</div>`;
+}
+function goalClick(e){
+  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2]"); if(!t) return false;
+  if(t.dataset.gopen){ const id = t.dataset.gopen; goalOpen.has(id) ? goalOpen.delete(id) : goalOpen.add(id); renderView(); return true; }
+  if(t.dataset.gdel){ const id = t.dataset.gdel;
+    if(goalDel!==id){ goalDel = id; renderView(); setTimeout(()=>{ if(goalDel===id){ goalDel = ""; if(view==="home") renderView(); } }, 4000); return true; }
+    goalDel = ""; saveGoals(list=>list.filter(g=>g.id!==id)).then(()=>toast("Goal removed")).catch(err=>toast("Couldn't remove it: " + (err?.message||err))); return true; }
+  const g = goals.find(x=>x.id===t.dataset.gset2); if(!g) return true;
+  openSetPage(g.setId); filt.sub = g.par ? "par:" + g.par : g.sub || ""; filt.cl = "missing"; saveFilt(); render(); return true;
+}
+$("#clGoal").onclick = ()=>{ const a = activeSet(); if(!a) return;
+  const sub = String(filt.sub||""); addGoal({setId:a.id, sub: sub.startsWith("par:") ? "" : sub, par: sub.startsWith("par:") ? sub.slice(4) : ""}); };
+
 /* ---------- Home ---------- */
 function renderHome(){
   const C = cards, units = c => Number(c.qty)||1;
@@ -4173,6 +4281,7 @@ function renderHome(){
       <button type="button" class="kpi" data-go="sets"><b>${mySets.length}</b><small>Sets</small></button>
       ${bought.length?`<button type="button" class="kpi" data-go="gain"><b class="${g>0?"gain":g<0?"loss":""}">${signed(g)}</b><small>Gain / loss · ${bought.length} cards</small></button>`:""}
     </div>
+    ${!viewing ? goalsHTML() : ""}
     ${recentSets.length?`<div class="sect-h"><h3>Your sets</h3><button type="button" data-go="sets">See all sets →</button></div><div class="setgrid">${recentSets.map(setTile).join("")}</div>`:""}
     ${top.length?`<div class="sect-h"><h3>Most valuable</h3><button type="button" data-go="value">See all →</button></div><div class="homegrid">${stackTiles(top)}</div>`:""}
     ${boxes.length?`<div class="sect-h"><h3>Boxes</h3><button type="button" data-go="boxes">See all boxes →</button></div><div class="setgrid">${boxes.map(boxTile).join("")}</div>`:""}
@@ -4181,6 +4290,7 @@ function renderHome(){
     ${!C.length?`<div class="empty"><h2>${viewing?esc(viewing)+" has no cards yet":"Your binder is empty"}</h2>${viewing?"":"<p>Open <strong>Sets</strong> to find a set, then <strong>+ Add card</strong>.</p>"}</div>`:""}`;
 }
 $("#vHome").addEventListener("click", e=>{
+  if(goalClick(e)) return;
   const go = e.target.closest("[data-go]");
   if(go){ const k = go.dataset.go;
     if(k==="sets" || k==="boxes") return setView(k);
@@ -4200,7 +4310,7 @@ function renderSetHead(){
   const a = activeSet(); if(!a){ $("#clBanner").innerHTML = ""; $("#clSubs").innerHTML = ""; return; }
   const st = setStats(a), cat = catalogs[a.id];
   $("#clBanner").innerHTML = bannerHTML(a, st.mine, `<span class="ybadge">${esc(yearLabel(a.year))}</span>`);
-  $("#clCover").hidden = $("#clAdd").hidden = !!viewing;
+  $("#clCover").hidden = $("#clAdd").hidden = $("#clGoal").hidden = !!viewing;
   if(!cat){ $("#clSubs").innerHTML = ""; return; }
   const own = ownership(a, cat), subs = [...new Set(cat.cards.map(e=>e.sub||"Base"))];
   const cur = String(filt.sub).startsWith("par:") ? "" : filt.sub;
@@ -4617,7 +4727,7 @@ function applyEye(){ document.body.classList.toggle("noprice", hidePrices); $("#
 $("#eyeBtn").onclick = ()=>{ hidePrices = !hidePrices; try{ hidePrices ? localStorage.setItem("cv-hidePrices","1") : localStorage.removeItem("cv-hidePrices"); }catch{}
   applyEye(); render(); renderPriceBar(); if(!$("#histDrawer").hidden) renderHistory(); if(cardOpen && !$("#cardDrawer").hidden) openCardPage(cardOpen); };
 applyEye();
-loadMe().then(refresh).then(()=>{ restoreTcdbRefs(); loadWants().then(render); }); loadSources();
+loadMe().then(refresh).then(()=>{ restoreTcdbRefs(); loadWants().then(render); loadGoals(); }); loadSources();
 
 // mark landscape photos so they are shown whole (see img.land)
 document.addEventListener("load", e=>{ const im = e.target; if(im.tagName==="IMG" && im.naturalWidth > im.naturalHeight*1.05) im.classList.add("land"); }, true);
