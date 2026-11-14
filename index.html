@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794671954";
+const BUILD = "1794673753";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4429,16 +4429,17 @@ function goalBase(setId, sub, par){ const cat = catalogs[setId]; if(!cat) return
 function goalName(g){
   if(g.setId==="*") return `“${g.q}” cards · every set${g.noAuto?" · no autographs / relics":""}${(g.skip||[]).length?` · ${g.skip.length} checklist${g.skip.length===1?"":"s"} left out`:""}`;
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId], p = g.par && cat && cat.parBySid.get(String(g.par));
-  return [s ? `${yearLabel(s.year)} ${s.name}` : "Set", p ? `${p.parent} · ${parLabel(p)}` : g.sub || "", g.q ? `“${g.q}”` : ""].filter(Boolean).join(" · ");
+  return [s ? `${yearLabel(s.year)} ${s.name}` : "Set", p ? `${p.parent} · ${parLabel(p)}` : g.sub || "", g.team || "", g.player || "", (g.flags||[]).includes("rookie") ? "rookies" : "", (g.flags||[]).includes("auto") ? "autographs" : "", g.q ? `“${g.q}”` : ""].filter(Boolean).join(" · ");
 }
 async function addGoal(g){
   if(viewing) return;
   if(g.setId==="*") await loadAllCatalogs(); else if(!catalogs[g.setId]) await loadCatalog(g.setId).catch(()=>null);
   const editId = g.editId;
-  g = {id: editId || "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay(), ...(g.setId==="*" ? {skip: [...(g.skip||[])], noAuto: !!g.noAuto} : {})};
+  g = {id: editId || "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay(), ...(g.setId==="*" ? {skip: [...(g.skip||[])], noAuto: !!g.noAuto} : {}),
+    ...(g.team ? {team: g.team} : {}), ...(g.player ? {player: g.player} : {}), ...((g.flags||[]).length ? {flags: [...g.flags]} : {})};
   g.name = goalName(g);
   if(editId){ try{ await saveGoals(list=>list.map(x=>x.id===editId ? {...g, made: x.made||g.made} : x)); toast(`🎯 Goal updated: ${g.name}`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); } return; }
-  if(g.setId!=="*" && goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q))){ toast("That's already one of your goals (on Goals)"); return; }
+  if(g.setId!=="*" && goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q) && (x.team||"")===(g.team||"") && (x.player||"")===(g.player||"") && (x.flags||[]).join()===(g.flags||[]).join())){ toast("That's already one of your goals (on Goals)"); return; }
   try{ await saveGoals(list=>[...list, g]); toast(`🎯 Goal added: ${g.name} · see it on Goals`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); }
 }
 // prices found for the cards you are missing for your goals: {key: {v, src, d, url, scpUrl, scpTried, tried130}}
@@ -4488,7 +4489,10 @@ function goalRows(g){
   const was = cards; cards = mine;   // ownership() reads the binder's cards: count only yours
   let rows;
   try{
-    const w = goalWords(g.q), hit = e => !w.length || w.every(x=>norm([e.sub||"Base", e.player, e.team, e.n, e.rc?"rookie rc":"", g._all ? s.name : ""].join(" ")).includes(x));
+    const w = goalWords(g.q), fl = g.flags || [];
+    const hit = e => (!w.length || w.every(x=>norm([e.sub||"Base", e.player, e.team, e.n, e.rc?"rookie rc":"", g._all ? s.name : ""].join(" ")).includes(x)))
+      && (!g.team || teamName(e.team)===g.team) && (!g.player || playerName(e.player)===g.player)
+      && (!fl.includes("rookie") || e.rc) && (!fl.includes("auto") || (e.tags||[]).includes("AU"));
     if(g.par){ const p = cat.parBySid.get(String(g.par)); if(!p) return null; const own = parOwnership(s, p);
       rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, s, cat, have: (own.get(pkey(n,pl))||[]).length, mine: own.get(pkey(n,pl))||[]} : null; }).filter(Boolean); }
     else { const own = ownership(s, cat);
@@ -4554,10 +4558,12 @@ function goalClick(e){
     goalDel = ""; saveGoals(list=>list.filter(g=>g.id!==id)).then(()=>toast("Goal removed")).catch(err=>toast("Couldn't remove it: " + (err?.message||err))); return true; }
   const g = goals.find(x=>x.id===t.dataset.gset2); if(!g) return true;
   if(g.setId==="*"){ setView("sets"); sp.scope = "all"; saveSp(); renderSetsPage(); $("#spDeep").value = deepQ = g.q; deepN = 60; renderDeep(); return true; }
-  openSetPage(g.setId); filt.sub = g.par ? "par:" + g.par : g.sub || ""; filt.cl = "missing"; saveFilt(); render(); return true;
+  openSetPage(g.setId); filt.sub = g.par ? "par:" + g.par : g.sub || ""; filt.cl = "missing"; filt.team = g.team || ""; filt.player = g.player || ""; filt.flags = [...(g.flags||[])]; saveFilt(); render(); return true;
 }
 $("#clGoal").onclick = ()=>{ const a = activeSet(); if(!a) return;
-  const sub = String(filt.sub||""); addGoal({setId:a.id, sub: sub.startsWith("par:") ? "" : sub, par: sub.startsWith("par:") ? sub.slice(4) : ""}); };
+  // the filters in use go with it: team, player, rookie / autograph, and the search box
+  const sub = String(filt.sub||""); addGoal({setId:a.id, sub: sub.startsWith("par:") ? "" : sub, par: sub.startsWith("par:") ? sub.slice(4) : "",
+    team: filt.team||"", player: filt.player||"", flags: (filt.flags||[]).filter(k=>k==="rookie"||k==="auto"), q: $("#q").value.trim()}); };
 
 /* ---------- Home ---------- */
 function renderHome(){
