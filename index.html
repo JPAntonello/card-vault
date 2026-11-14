@@ -1375,7 +1375,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794626722";
+const BUILD = "1794626794";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3651,7 +3651,7 @@ function cardMoves(cut){
   for(const c of myCards){
     const h = (c.valueHist||[]).filter(x=>x && x.d && Number(x.v)>0).sort((a,b)=>a.d.localeCompare(b.d)), now = Number(c.value)||0;
     if(h.length<2 || !now) continue;
-    const base = cut ? [...h].reverse().find(x=>x.d<=cut) || null : h[0];
+    const base = (cut && [...h].reverse().find(x=>x.d<=cut)) || (!cut || h[0].d>=cut ? h[0] : null);   // a card first priced inside the range counts from its first price
     if(!base || base.v===now) continue;
     const q = Number(c.qty)||1; list.push({c, from: base.v, to: now, d: base.d, ch: (now-base.v)*q, pc: (now-base.v)*100/base.v});
   }
