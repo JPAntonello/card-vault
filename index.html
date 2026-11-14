@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794669170";
+const BUILD = "1794670639";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3339,9 +3339,15 @@ async function resplitBoxes(looked, force){
   toast(`Box cost split by market value (${n} box${n===1?"":"es"})`);
 }
 async function applyPriceResults(site, results){
-  const setIds = Object.keys(results||{}).filter(id=>id.startsWith("set~"));
-  if(setIds.length){ results = {...results}; let n = 0;
-    for(const id of setIds){ n += await applySetPics(id.split("~")[1], results[id]); delete results[id]; }
+  const setIds = Object.keys(results||{}).filter(id=>id.startsWith("set~") || id.startsWith("pic~"));
+  if(setIds.length){ results = {...results}; let n = 0; const one = {};
+    for(const id of setIds){
+      if(id.startsWith("set~")) n += await applySetPics(id.split("~")[1], results[id]);
+      else { const [, sid, i] = id.split("~"), s = sets.find(x=>x.id===sid), cat = catalogs[sid] || await loadCatalog(sid).catch(()=>null), e = cat && cat.cards[+i];
+        if(s && e){ const hit = picPick(picCard(s, e), results[id]);
+          if(hit) (one[sid] = one[sid] || {})[goalKey(s, e, null)] = hit[2]; } }
+      delete results[id]; }
+    for(const [sid, add] of Object.entries(one)) n += await saveSetPics(sid, add);
     toast(n ? `📷 ${n} checklist photo${n===1?"":"s"} saved` : "No checklist photos found on that SportsCardsPro page"); render();
     if(!Object.keys(results).length) return; }
   await Promise.all([...new Set(Object.keys(results||{}).map(id=>(cards.find(x=>x.id===id)||{}).setId).filter(Boolean))].map(id=>loadCatalog(id).catch(()=>null)));
@@ -4329,7 +4335,7 @@ function scpConsoles(s){
   const urls = [...allCards, ...friends.flatMap(f=>f.cards||[])].filter(c=>c.setId===s.id && c.scpUrl).map(c=>c.scpUrl)
     .concat(Object.entries(goalPrices).filter(([k,r])=>k.startsWith(s.id+"|") && r.scpUrl).map(([,r])=>r.scpUrl));
   const known = [...new Set(urls.map(u=>(String(u).match(/sportscardspro\.com\/game\/([^/?#]+)\//)||[])[1]).filter(Boolean))];
-  return withInsertPages(s, known);
+  return known;
 }
 // each insert has its own SportsCardsPro page: the base page's name + the insert's name ("…-superstars-matchwinner")
 function withInsertPages(s, known){
@@ -4344,11 +4350,26 @@ function getSetPics(){
   if(!cons.length){
     const u = prompt(`No card of ${s.name} is linked to SportsCardsPro yet. Paste the SportsCardsPro page of this set (it starts with sportscardspro.com/console/…):`) || "";
     const m = u.match(/sportscardspro\.com\/console\/([^/?#]+)/); if(!m){ if(u) toast("That isn't a SportsCardsPro set page"); return; }
-    cons = withInsertPages(s, [m[1]]);
+    cons = [m[1]];
   }
-  openFind("scp", "price", cons.map(c=>["set~" + s.id + "~" + c, "https://www.sportscardspro.com/console/" + c]));
+  // inserts are not on the set's page there: each insert card is searched by its name and number ("Paolo Maldini #LD-11")
+  const cat = catalogs[s.id], have = setPics[s.id] || {};
+  const ins = cat ? cat.cards.map((e,i)=>[e,i]).filter(([e])=>e.sub && e.sub!=="Base" && !have[goalKey(s, e, null)]) : [];
+  const items = [...cons.map(c=>["set~" + s.id + "~" + c, "https://www.sportscardspro.com/console/" + c]),
+    ...ins.slice(0, SCP_MAX).map(([e,i])=>["pic~" + s.id + "~" + i, ...new Set([`${e.player} #${e.n}`, `${String(e.player).split(" ").pop()} #${e.n}`])])];   // "Noni Madueke #SC-1", then "Madueke #SC-1"
+  if(ins.length > SCP_MAX) toast(`${SCP_MAX} of ${ins.length} insert cards this time: click Checklist photos again for the rest`);
+  openFind("scp", "price", items);
 }
 $("#clPics").onclick = getSetPics;
+// for a photo the card's own name and number are enough ("Noni Madueke #SC-1"), in the same year; its plain version, not a [parallel]
+function picPick(c, rows){
+  const last = nrm(c.player).split(" ").pop(), num = String(c.number||"").replace(/^#/,"").trim(), y = Number(firstYear(c)) || 0;
+  const ok = (rows||[]).filter(r=>{ const raw = String(r[0]||""), t = " " + nrm(raw) + " ";
+    return /^[A-Za-z0-9]{6,64}$/.test(r[2]||"") && last && t.includes(" "+last+" ") && num && new RegExp("#" + reEsc(num) + "(?![\\w-])", "i").test(raw) && (!y || [y, y-1, y+1].some(v=>t.includes(" "+v+" "))); });
+  return ok.find(r=>!/\[/.test(r[0])) || null;
+}
+// a checklist card as a card the SportsCardsPro searches understand
+const picCard = (s, e) => ({id:"", player:e.player, number:e.n, team:e.team||"", set:s.name, setId:s.id, year:s.year, variant:e.sub && e.sub!=="Base" ? e.sub : "", parallel:"", serial:""});
 // a SportsCardsPro set page's cards ("Name [Version] #12") matched to the checklist: base / insert cards and each parallel
 async function applySetPics(setId, rows){
   const s = sets.find(x=>x.id===setId); if(!s) return 0;
@@ -4368,6 +4389,9 @@ async function applySetPics(setId, rows){
     const p = (cat.parallels||[]).find(x=>words(parLabel(x)).sort().join(" ")===bw && x.cards.some(([n,,pl])=>normNum(n)===normNum(e.n) && (!pl || pnk(pl)===pnk(e.player))));
     if(p) add[goalKey(s, e, p)] = img;
   }
+  return saveSetPics(setId, add);
+}
+async function saveSetPics(setId, add){
   const n = Object.keys(add).length; if(!n) return 0;
   let base = {}; try{ const r = await fetch("/api/setpics/" + encodeURIComponent(setId)); if(r.ok) base = await r.json() || {}; }catch{}
   const next = {...base, ...add};
