@@ -45,7 +45,7 @@
       const m = (a.getAttribute('href') || '').match(/\/Checklist\.cfm\/sid\/(\d+)\/([^/?#]+)/); if (!m || m[1] == sid) continue;
       const tr = a.closest('tr'); if (!tr || !txt(a)) continue;
       const cells = [...tr.cells].map(txt).filter(Boolean);
-      const name = txt(a), tags = cells.slice(cells.indexOf(name) + 1).join(' ')
+      const name = txt(a), tags = cells.slice(cells.indexOf(name) + 1).join(' ').replace(new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*'), '')
         .replace(/Serial numbered to (\d+)/ig, 'SN$1').replace(/Serial numbered 1\/1/ig, 'SN1');
       out.set(m[1], `${m[1]}|${name}|${tags}|${m[2]}`);
     }

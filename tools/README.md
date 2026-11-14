@@ -11,7 +11,8 @@ Add hand-written cases to `tests/extra-cases.json` (same shape: `{card, title, e
 ## Weekly TCDB check
 1. Open a www.tcdb.com tab in Chrome (pass the security check if shown).
 2. Paste `tools/tcdb-scan.js`, then `cvScan.run()`; poll `cvScan.summary()` until `finished`.
-   It downloads `cv-tcdb-scan.json` (only the sets with something new).
+   Then download the result (`cvScan.download=true` before running, or a Blob link) as `cv-tcdb-scan.json`
+   and bring it in from the Downloads folder (only the sets with something new are in it).
 3. `python3 tools/update_sets.py cv-tcdb-scan.json` adds the new base cards, inserts and
    parallels to `library/` (additions only) and writes `tools/last-update.json`.
 4. `node tests/price-test.js`, then commit and push.
