@@ -1087,5 +1087,16 @@
     "count": 692,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/137759/2016-17-Panini-Select",
     "note": "TCDB: 2016 17 Panini Select · 12 subsets · 75 parallels"
+  },
+  {
+    "id": "mvtucc2425",
+    "year": "2024/25",
+    "name": "Topps UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-14T22:17:44.000Z",
+    "count": 788,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/467821/2024-25-Topps-UEFA-Club-Competitions",
+    "note": "TCDB: 2024 25 Topps UEFA Club Competitions · 30 subsets · 122 parallels"
   }
 ]
