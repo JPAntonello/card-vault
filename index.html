@@ -1375,7 +1375,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794628700";
+const BUILD = "1794628853";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3077,7 +3077,7 @@ const scpCan = c => c.scpUrl ? !(c.scpTried && Date.now()-Date.parse(c.scpTried)
 const scpNeed = () => { const w = new Set(lsList("cv-130list")), l = toPrice().filter(c=>scpCan(c) && (c.scpNew || !w.has(c.id)) && !needPhoto(c)), s = new Set(l);
   // cards with a SportsCardsPro page and no photo: the same run brings the photo (their price is refreshed too)
   return [...l, ...myCards.filter(c=>c.scpUrl && !s.has(c) && priceable(c) && wantsScpPic(c) && !(c.scpPicTried && Date.now()-Date.parse(c.scpPicTried) < 7*DAY))]; };   // its own wait: other photo searches do not count   // a newly linked page is read first
-const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scpNeed()); return toPrice().filter(c=>!s.has(c) && !c.scpReview && !hasScpPrice(c) && (w.has(c.id) || !scpCan(c))); };
+const need130 = () => { const w = new Set(lsList("cv-130list")), s = new Set(scpNeed()); return toPrice().filter(c=>!s.has(c) && !c.scpReview && !hasScpPrice(c) && !(c.scpUrl && scpCan(c)) && (w.has(c.id) || !scpCan(c))); };   // a linked card waits for its SportsCardsPro check first
 // SportsCardsPro comes first: a card priced from its SportsCardsPro page is never re-priced from eBay sales
 const hasScpPrice = c => c.valueSource==="SportsCardsPro" && Number(c.value)>0;
 function priceScp(list){
