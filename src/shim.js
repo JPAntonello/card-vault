@@ -165,6 +165,13 @@ async function api(url, method, rawBody){
     if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400);
       try{ await putDoc(m[1], list, true); }catch(e){ if(e instanceof Stale) return T("Changed in another tab", 409); throw e; } return N(); }
   }
+  // checklist photos of a set, shared by everyone (Supabase library row "pics:<set id>")
+  if((m = p.match(/^\/api\/setpics\/([A-Za-z0-9_-]{1,64})$/))){
+    const id = "pics:" + m[1];
+    if(method === "GET"){ const row = chk(await sb.from("library").select("body").eq("id", id).maybeSingle()); return J((row && row.body) || {}); }
+    if(method === "PUT"){ const body = JSON.parse(await bodyText(rawBody)); if(!body || typeof body !== "object" || Array.isArray(body)) return T("Expected an object.", 400);
+      chk(await sb.from("library").upsert({id, body, updated_at: new Date().toISOString()})); return N(); }
+  }
   if(p === "/api/sets"){
     if(method === "GET") return J(await getSets());
     if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400); await putSets(list); return N(); }
