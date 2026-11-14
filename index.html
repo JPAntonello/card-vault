@@ -443,6 +443,7 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 .goal li{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
 .goal li .gN{min-width:54px;color:var(--muted);font-variant-numeric:tabular-nums}.goal li .gP{flex:1;min-width:0}.goal li .gV{font-variant-numeric:tabular-nums;white-space:nowrap}
 .goal li .gF{display:block;color:var(--label);font-size:12px}
+.goal li .gPic{width:30px;height:42px;object-fit:cover;border-radius:4px;background:var(--bg);flex:none;align-self:center}
 #spDeepRes .dgGoal{float:right;margin:6px 10px 0 0;font-size:12px;padding:2px 10px}
 #spDeepRes .dgPick{float:right;margin:8px 12px 0 0;display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
 #spDeepRes .dgPick input{width:18px;height:18px;accent-color:var(--ok)}
@@ -1375,7 +1376,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794656546";
+const BUILD = "1794657177";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -3387,8 +3388,9 @@ async function applyPriceResults(site, results){
   const gIds = Object.keys(results||{}).filter(id=>gMap.has(id) && results[id]!==null);
   if(gIds.length) await saveGoalPrices(m=>{ const n = {...m};
     for(const id of gIds){ const k = id.slice(2), r = {...(n[k]||{})}, u = upd.get(id);
-      if(site==="scp"){ r.scpTried = day; if(scpLink.has(id)) r.scpUrl = scpLink.get(id); if(u){ Object.assign(r, {v: u.value, src: "SportsCardsPro", d: day, url: u.url||r.scpUrl||""}); } }
-      else { r.tried130 = day; if(u && r.src!=="SportsCardsPro"){ Object.assign(r, {v: u.value, src: "eBay sold", d: day, url: u.url||"", note: u.note||""}); } }
+      // the photo comes with the price: the SportsCardsPro page's picture, or the eBay sale's when there is none yet
+      if(site==="scp"){ r.scpTried = day; if(scpLink.has(id)) r.scpUrl = scpLink.get(id); if(pics.has(id)) r.pic = pics.get(id).file; if(u){ Object.assign(r, {v: u.value, src: "SportsCardsPro", d: day, url: u.url||r.scpUrl||""}); } }
+      else { r.tried130 = day; if(u && !r.pic && salePic(u.img)) r.pic = salePic(u.img); if(u && r.src!=="SportsCardsPro"){ Object.assign(r, {v: u.value, src: "eBay sold", d: day, url: u.url||"", note: u.note||""}); } }
       n[k] = r; }
     return n; }).catch(err=>toast("Couldn't save the goal prices: " + (err?.message||err)));
   const scpF0 = c => site!=="scp" || !results[c.id] ? c : {...c, ...(c.scpNew ? {scpNew: false} : {}), ...(!upd.has(c.id) || (keepManual() && c.valueSource==="Manual") ? {scpTried: day} : {})};
@@ -4421,7 +4423,7 @@ function goalsHTML(){
       <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${open==="miss"}">Missing ${miss.length}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${open==="have"}">I have ${have}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
       ${open==="have" ? `<div class="gHave">${got.slice(0,300).map(x=>{ const c = x.mine[0]; const img = c && cardImg(c);
           return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${g.setId==="*"?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
-      ${open==="miss" ? `<ul>${priced.slice(0,200).map(x=>`<li><span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${g.setId==="*"?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
+      ${open==="miss" ? `<ul>${priced.slice(0,200).map(x=>`<li>${(()=>{ const pic = (goalPrices[goalKey(x.s, x.e, x.p)]||{}).pic; return pic ? `<img class="gPic" src="${esc(pic.replace(/\/1600\.jpg$/, "/240.jpg").replace(/s-l1600(\.\w+)$/, "s-l225$1"))}" alt="" loading="lazy">` : `<span class="gPic"></span>`; })()}<span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${g.setId==="*"?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
     </div>`;
   }).join("");
   return `<div class="goals">${tiles}</div>`;
