@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794670639";
+const BUILD = "1794671954";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4346,15 +4346,20 @@ function withInsertPages(s, known){
 }
 function getSetPics(){
   const s = activeSet(); if(!s) return;
-  let cons = scpConsoles(s);
-  if(!cons.length){
+  // only what the checklist is showing: one insert, the base cards, or the whole set
+  const pick = String(filt.sub||"");
+  if(pick.startsWith("par:")){ toast("Checklist photos are for the base and insert cards: pick Base, an insert or All above"); return; }
+  const wantBase = !pick || pick==="Base";
+  let cons = wantBase ? scpConsoles(s) : [];
+  if(wantBase && !cons.length){
     const u = prompt(`No card of ${s.name} is linked to SportsCardsPro yet. Paste the SportsCardsPro page of this set (it starts with sportscardspro.com/console/…):`) || "";
-    const m = u.match(/sportscardspro\.com\/console\/([^/?#]+)/); if(!m){ if(u) toast("That isn't a SportsCardsPro set page"); return; }
-    cons = [m[1]];
+    const m = u.match(/sportscardspro\.com\/console\/([^/?#]+)/);
+    if(m) cons = [m[1]]; else { if(u) toast("That isn't a SportsCardsPro set page"); if(pick==="Base") return; }   // the whole set: its inserts still go
   }
   // inserts are not on the set's page there: each insert card is searched by its name and number ("Paolo Maldini #LD-11")
   const cat = catalogs[s.id], have = setPics[s.id] || {};
-  const ins = cat ? cat.cards.map((e,i)=>[e,i]).filter(([e])=>e.sub && e.sub!=="Base" && !have[goalKey(s, e, null)]) : [];
+  const ins = cat ? cat.cards.map((e,i)=>[e,i]).filter(([e])=>e.sub && e.sub!=="Base" && (!pick || e.sub===pick) && !have[goalKey(s, e, null)]) : [];
+  if(!cons.length && !ins.length){ toast(pick ? `Every ${pick} card already has its photo` : "Every card already has its photo"); return; }
   const items = [...cons.map(c=>["set~" + s.id + "~" + c, "https://www.sportscardspro.com/console/" + c]),
     ...ins.slice(0, SCP_MAX).map(([e,i])=>["pic~" + s.id + "~" + i, ...new Set([`${e.player} #${e.n}`, `${String(e.player).split(" ").pop()} #${e.n}`])])];   // "Noni Madueke #SC-1", then "Madueke #SC-1"
   if(ins.length > SCP_MAX) toast(`${SCP_MAX} of ${ins.length} insert cards this time: click Checklist photos again for the rest`);
