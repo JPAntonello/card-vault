@@ -1343,7 +1343,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794605155";
+const BUILD = "1794623017";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2724,7 +2724,7 @@ function globalPhrases(){
   if(globalVers) return globalVers;
   const s = new Set();
   // parallels only: another set's insert name ("Beast Mode") can be the name of a base card here
-  const pn = n => nrm(n).replace(/[#\[\]\/]/g," ").replace(/\bprizms\b/g,"prizm").replace(/\s+/g," ").trim();
+  const pn = n => nrm(n).replace(/[#\[\]\/]/g," ").replace(/\bprizms\b/g,"prizm").replace(/\brefractors\b/g,"refractor").replace(/\s+/g," ").trim();
   for(const id of Object.keys(catalogs)) for(const ph0 of (catalogs[id].parallels||[]).flatMap(p=>{ const a = pn(p.name), b = a.replace(/\b(refractors?|parallels?|prizm)\b/g,"").replace(/\s+/g," ").trim(); return b && b!==a && b.length>=3 ? [a,b] : [a]; })){ const ph = ph0;
     if(/\b(autographs?|signatures?|signed|relics?|auto|patch)\b/.test(ph)) continue;
     const ws = ph.split(" "); if(ws.every(w=>GENERIC_W.test(w) || SET_STOP.has(w))) continue;
@@ -2771,7 +2771,8 @@ function cardMatch(title, c, strict){
   // why a sale is not this card (shown on the card), and the word to blame, if any
   const NO = (r, w) => { cardMatch.rej = r; cardMatch.rejWord = w || ""; return -1; }; cardMatch.rej = ""; cardMatch.rejWord = "";
   const AL = " " + allowedFor(c).join(" ") + " ";   // words you said are your card for this set
-  const t = (" " + nrm(title) + " ").replace(/ wc /g, " wc world cup ").replace(/ usmnt /g, " usmnt united states ").replace(/ epl /g, " epl premier league ");
+  const t = (" " + nrm(title) + " ").replace(/ wc /g, " wc world cup ").replace(/ usmnt /g, " usmnt united states ").replace(/ epl /g, " epl premier league ")
+    .replace(/ womens /g, " womens women s ").replace(/ u?wcl /g, " wcl women s champions league ").replace(/ munich /g, " munich munchen ");
   const last = nrm(c.player).split(" ").pop(); if(!last || !t.includes(last)) return NO("player's name missing");
   const num = nrm(String(c.number||"")).replace(/^#/,"");
   let noNum = false;
@@ -2791,30 +2792,33 @@ function cardMatch(title, c, strict){
   // an insert's own code in the title ("#CA-DY") already names the insert: sellers shorten its name ("Consequential Autographs" -> "Auto")
   const codeHit = !noNum && /[a-z]/.test(num) && /\d|-|[a-z]{2,}/.test(num) && num.length >= 3;
   const autoW = /\b(auto|autos|autograph|autographs|autographed|signed|signature|signatures)\b/.test(t);
-  for(const w of wordSet(c.variant).split(" ")) if(w && !/^[\d\/]/.test(w) && !SET_STOP.has(w) && !parW.includes(w) && !t.includes(" "+w)
+  for(const w of wordSet(c.variant).split(" ")) if(w && !/^[\d\/]/.test(w) && !/^(or|less|than|under|of)$/.test(w) && !SET_STOP.has(w) && !parW.includes(w) && !t.includes(" "+w)
     && !codeHit && !(/^(autographs?|signatures?)$/.test(w) && autoW)) return NO(`the word "${w}" of your version is missing`);
   const ys = String(c.year||"").match(/\d{2,4}/g) || [];
-  if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; const yy = String(y).slice(2); if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `,` ${y-1} ${yy} `,` ${y-1}/${yy} `,` ${y-1} ${y} `].some(k=>t.includes(k))) return NO("another year"); }   // "2026" cards are sold as "2025-26"
+  if(ys.length){ let y = +ys[0]; if(y<100) y += 2000; const yy = String(y).slice(2); if(![` ${y} `,` ${y}-`,` ${y}/`,` ${y+1} `,` ${y-1} ${yy} `,` ${y-1}/${yy} `,` ${y-1} ${y} `].some(k=>t.includes(k))
+    // no year at all, but the insert's own code and name ("Roots #RT-11"): the seller left the year out
+    && !(codeHit && !/\b(19|20)\d{2}\b|\b\d{2} \d{2}\b/.test(t) && (s0=>s0 && s0!=="base" && s0.length>=4 && t.includes(" "+s0+" "))(nrm(ownSub(c))))) return NO("another year"); }   // "2026" cards are sold as "2025-26"
   const set = nrm(c.set).replace(/\bpl\b/g,"premier league");
-  for(const w of set.split(" ")) if(w && !/^\d/.test(w) && !SET_STOP.has(w) && !t.includes(" "+w+" ")) return NO(`the set word "${w}" is missing`);
+  for(const w of set.split(" ")) if(w.length>1 && !/^\d/.test(w) && !SET_STOP.has(w) && !t.includes(" "+w+" ")) return NO(`the set word "${w}" is missing`);
   // a team set is sold as "... Team Set": a card of the same team from another product is not it
   if(/\bteam set\b/.test(set) && !/\bteam ?(set|product)\b|\bnational team\b|\btopps fc\b/.test(t)) return NO("not the team set");   // team sets: "Team Set", "Official National Team Product", "Topps FC"
   // SportsCardsPro shortens "Road to FIFA World Cup 26" to "Road to FIFA"
-  for(const k of ["premier league","world cup","champions"]) if(set.includes(k) && !t.includes(k) && !(k==="world cup" && /\broad to fifa\b/.test(t) && /\broad to fifa\b/.test(set))) return NO(`"${k}" is missing`);
+  for(const k of ["premier league","world cup","champions"]) if(set.includes(k) && !t.includes(k) && !(k==="world cup" && /\broad to fifa\b/.test(t) && /\broad to fifa\b/.test(set)) && !(k==="champions" && /\bwomen s champions\b/.test(set) && / uefa womens? /.test(t))) return NO(`"${k}" is missing`);
   let par = nrm(c.parallel); if(par && set.includes("mosaic") && par.startsWith("mosaic ")) par = par.slice(7);
   if(strict){
     const br = (t.match(/\[([^\]]+)\]/)||[])[1] || "";
     if(wordSet(br) !== wordSet(par)) return NO("another version");
   } else {
-    for(const w of wordSet(par).split(" ")){ if(!w || (w==="refractor" && wordSet(par)!=="refractor")) continue;   // "Green Refractor" is sold as "Green /99"
+    for(const w of wordSet(par).split(" ")){ if(!w || (/^refractors?$/.test(w) && !/^refractors?$/.test(wordSet(par)))) continue;   // "Green Refractor" is sold as "Green /99"
       const need = (" "+set+" ").includes(" "+w+" ") ? 2 : 1;
       if((t.match(new RegExp("(?<![a-z0-9])"+reEsc(w),"g"))||[]).length < need) return NO(`the version word "${w}" is missing`); }
     // "Holo" parallels are sold as "Holo Silver" / "Silver Holo"
-    if(par){ const mine = ` ${wordSet(par)} ${set} ${nrm(c.team)} ${AL} ${/\bholo\b/.test(wordSet(par)) && /\bholo\b/.test(t) ? "silver" : ""} `;
+    if(par){ const mine = ` ${wordSet(par)} ${wordSet(par).replace(/\brefractors\b/g,"refractor")} ${set} ${nrm(c.team)} ${AL} ${/\bholo\b/.test(wordSet(par)) && /\bholo\b/.test(t) ? "silver" : ""} `;
       for(const m of t.matchAll(new RegExp("\\b("+PAR_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return NO(`another version: "${m[1]}"`, m[1]); }
     else {
-      const tNoSet = set.split(" ").reduce((s,w)=> w ? s.replace(new RegExp(" "+reEsc(w)+" ","g")," ") : s, t);   // "Gold" in "Topps Gold" names the set, not a parallel
+      const tNoSet = set.split(" ").reduce((s,w)=> w ? s.replace(new RegExp(" "+reEsc(w)+" ","g")," ") : s, num ? t.replace(new RegExp("#?"+reEsc(num)+"(?![a-z0-9])","g")," ") : t);   // "Gold" in "Topps Gold" names the set, not a parallel
       const pm = tNoSet.match(new RegExp("\\b("+PAR_WORDS+"|sp|ssp)\\b")); if(pm && !AL.includes(" "+pm[1]+" ") && !/\b(optic|chrome)\b/.test(set)) return NO(`a parallel word: "${pm[1]}"`, pm[1]);
+      if(/\bchrome\b/.test(set) && /\brefractors?\b/.test(tNoSet) && !AL.includes(" refractor ")) return NO(`a parallel word: "refractor"`, "refractor");   // a base Chrome card is not the Refractor
       if(!set.includes("mosaic") && /\bmosaic\b/.test(t) && !AL.includes(" mosaic ")) return NO("a Mosaic card", "mosaic");
     }
     // "Prizm" after a Donruss/Optic/Select card's own product name is how sellers say "shiny" ("Optic Holo Silver Prizm")
@@ -2826,12 +2830,12 @@ function cardMatch(title, c, strict){
       const cat0 = catalogs[c.setId]; const ownW = own + ` ${set} ${nrm(c.player)} ` + (!c.parallel && cat0 && cat0.parallels.some(p=>/^common\b/i.test(p.name)) ? " common yellow " : "");
       for(const w of (catalogs[c.setId]||{})._words||[]) if(!ownW.includes(" "+w+" ") && t.includes(" "+w+" ")) return NO(`another version: "${w}"`, w);
       // versions named in any of your checklists ("Heat Vision", "Spectrum"…) and words you marked "not my card" for this set
-      const pz = s => s.replace(/\bprizms\b/g,"prizm"), ownG = pz(ownW + ` ${nrm(c.set)} ${nrm(c.year)} `), tG = pz(t);
+      const pz = s => s.replace(/\bprizms\b/g,"prizm").replace(/\brefractors\b/g,"refractor"), ownG = pz(ownW + ` ${nrm(c.set)} ${nrm(c.year)} `), tG = pz(t);
       for(const ph of globalPhrases()) if(!ownG.includes(" "+ph+" ") && tG.includes(" "+ph+" ")) return NO(`another version: "${ph}"`, ph);
       for(const ph of blockedFor(c)) if(t.includes(" "+ph+" ")) return NO(`you marked "${ph}" as not your card`); }
     // rare versions sellers name (SSP, Plum Blossom, Diamond…): only when this card is that version
     { const mine = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${AL} ${/variation/i.test(ownSub(c)) ? "sp ssp short print var variation" : ""} ${c.serial || c.auto ? "sp" : ""} ${set} ${nrm(c.team)} ${/\battax\b/.test(set) ? "diamond" : ""} `;   // Turbo/Match Attax: "Diamond" cards are base cards
-      for(const m of t.matchAll(new RegExp("\\b("+RARE_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return NO(`a rare version: "${m[1]}"`, m[1]); }
+      for(const m of (num ? t.replace(new RegExp("#?"+reEsc(num)+"(?![a-z0-9])","g")," ") : t).matchAll(new RegExp("\\b("+RARE_WORDS+")\\b","g"))) if(!mine.includes(" "+m[1]+" ")) return NO(`a rare version: "${m[1]}"`, m[1]); }
     if(/\b(lot|lots|you pick|u pick|choose|complete set|pick your|break|box)\b/.test(t)) return NO("a lot, break or box");
     if(!c.auto && /\b(auto|autograph|signed)\b/.test(t)) return NO("autographed");
     if(!c.serial && hasPrintRun(t)) return NO("numbered");
