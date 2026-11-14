@@ -266,7 +266,7 @@ body.ro #openBoxBtn{display:none!important}
 .nav button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--label)}
 .nav button small{font-family:var(--body);font-weight:500;font-size:.75rem;opacity:.7;margin-left:4px;letter-spacing:0}
 body:not([data-view="cards"]) :is(.stats,.searchrow,#activeF,#fPanel,.resbar,#clBar,#grid,#noMatch,#empty){display:none!important}
-body:not([data-view="tidy"]) #vTidy,body:not([data-view="home"]) #vHome,body:not([data-view="sets"]) #vSets,body:not([data-view="boxes"]) #vBoxes{display:none!important}
+body:not([data-view="tidy"]) #vTidy,body:not([data-view="home"]) #vHome,body:not([data-view="sets"]) #vSets,body:not([data-view="goals"]) #vGoals,body:not([data-view="boxes"]) #vBoxes{display:none!important}
 .tray{display:none!important}   /* photo and price updates live in the Tidy up sections, not in banners */
 .tdyTools{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--muted)}
 .tdyTools .moreopt>summary{display:inline;width:auto;height:auto;border:0;margin:0;font-size:12px;text-decoration:underline;cursor:pointer}
@@ -419,7 +419,12 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 .bklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .bklist li{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.88rem}
 .trd{display:flex;flex-direction:column;gap:6px;font-size:.9rem}
-.goals{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start}
+.goals{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
+.gHave{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;max-height:460px;overflow:auto;padding-top:4px}
+.gHave .gH{display:flex;flex-direction:column;gap:4px;align-items:stretch;padding:0;border:0;background:none;color:var(--ink);text-align:left;font:inherit;font-size:11px;cursor:pointer}
+.gHave .gH img,.gHave .gNo{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:6px;background:var(--bg);border:1px solid var(--line)}
+.gHave .gNo{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.gHave .gH small{display:block;color:var(--muted)}
 .goal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .goal .gTop{display:flex;gap:8px;align-items:baseline}.goal .gTop b{flex:1;min-width:0}
 .goal .gNum{font-variant-numeric:tabular-nums;font-weight:700}.goal .gDone{color:var(--ok);font-weight:700}
@@ -429,6 +434,11 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 .goal li .gN{min-width:54px;color:var(--muted);font-variant-numeric:tabular-nums}.goal li .gP{flex:1;min-width:0}.goal li .gV{font-variant-numeric:tabular-nums;white-space:nowrap}
 .goal li .gF{display:block;color:var(--label);font-size:12px}
 #spDeepRes .dgGoal{float:right;margin:6px 10px 0 0;font-size:12px;padding:2px 10px}
+#spDeepRes .dgPick{float:right;margin:8px 12px 0 0;display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
+#spDeepRes .dgPick input{width:18px;height:18px;accent-color:var(--ok)}
+#spDeepRes .dg.off{opacity:.45}
+.gPickBar{position:sticky;top:0;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin:8px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gPickBar b{flex:1 1 100%}
 /* phones: the sections menu at the bottom, bigger touch targets */
 @media (max-width:640px){
   .wrap>.nav{position:fixed;left:0;right:0;bottom:0;z-index:18;margin:0;border-radius:0;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--surface)}
@@ -495,10 +505,12 @@ body.noprice .vbadge,body.noprice .val,body.noprice .pl-row,body.noprice .spark,
     <button type="button" data-view="home">Home</button>
     <button type="button" data-view="cards">Collection <small id="navCards"></small></button>
     <button type="button" data-view="sets">Sets <small id="navSets"></small></button>
+    <button type="button" data-view="goals">Goals <small id="navGoals"></small></button>
     <button type="button" data-view="boxes">Boxes <small id="navBoxes"></small></button>
     <button type="button" data-view="tidy">Tidy up <small id="navTidy"></small></button>
   </nav>
   <section class="view" id="vHome" aria-label="Home"></section>
+  <section class="view" id="vGoals" aria-label="Goals"></section>
   <section class="view" id="vSets" aria-label="Sets">
     <div class="pagehead"><div><h2>Sets</h2><p class="sub">Every checklist in your library, with how much of each you have.</p></div><button type="button" class="btn" id="spReq">+ Request a set</button></div>
     <div class="chiprow" id="spScope" role="group" aria-label="Which sets"></div>
@@ -1353,7 +1365,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794625441";
+const BUILD = "1794625904";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4095,7 +4107,8 @@ async function renderDeep(){
   const on = q.length >= 2; box.hidden = !on; $("#spGrid").hidden = $("#spPager").hidden = $("#spCount").hidden = on;
   if(!on){ box.innerHTML = ""; return; }
   const words = q.split(/\s+/);
-  const all = sets.filter(s=>s.status==="ready"), scope = sp.scope==="mine" ? all.filter(s=>cardsOfSet(s).length) : all;
+  if(goalPick && norm(goalPick.q)!==q) goalPick = null;
+  const all = sets.filter(s=>s.status==="ready"), scope = sp.scope==="mine" && !goalPick ? all.filter(s=>cardsOfSet(s).length) : all;
   const need = scope.filter(s=>!catalogs[s.id]);
   if(need.length){ box.innerHTML = `<p class="hint">Reading ${need.length} checklist${need.length===1?"":"s"}…</p>`; await Promise.all(need.map(s=>loadCatalog(s.id).catch(()=>null))); if(norm(deepQ).trim()!==q) return; }
   const hit = txt => { const t = norm(txt); return words.every(w=>t.includes(w)); };
@@ -4119,8 +4132,14 @@ async function renderDeep(){
   groups.sort((a,b)=>yearNum(a.s.year)-yearNum(b.s.year) || a.s.name.localeCompare(b.s.name) || (a.rows[0].par?1:0)-(b.rows[0].par?1:0) || a.sub.length-b.sub.length);   // by year, oldest first
   const total = groups.reduce((n,g)=>n+g.rows.length,0), have = groups.reduce((n,g)=>n+g.have,0);
   box.innerHTML = !groups.length ? `<p class="hint">Nothing called “${esc(deepQ)}” in ${sp.scope==="mine"?"your sets. Try <b>Whole library</b>.":"the library."}</p>`
-    : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b>${viewing?"":` <button type="button" class="chip" id="deepGoal" title="One goal with every card of this search, in every set of the library (sets added later count too)">🎯 Make “${esc(deepQ.trim())}” a goal · every set</button>`}</p>` +
-      groups.slice(0, deepN).map(g=>`<section class="dg">${viewing?"":`<button type="button" class="chip dgGoal" data-gset="${esc(g.s.id)}" data-gsub="${esc(g.rows[0].par ? "" : g.sub)}" data-gpar="${esc(g.rows[0].par ? g.rows[0].par.sid : "")}" data-gq="${esc(g.rows.length < goalBase(g.s.id, g.rows[0].par ? "" : g.sub, g.rows[0].par ? g.rows[0].par.sid : "") ? deepQ.trim() : "")}" title="Track this checklist on Home">🎯 Goal</button>`}
+    : `<p class="fstatus">${total} card${total===1?"":"s"} in ${groups.length} checklist${groups.length===1?"":"s"} · you have <b>${have}</b>, missing <b>${total-have}</b>${viewing||goalPick?"":` <button type="button" class="chip" id="deepGoal" title="Choose which checklists of this search go into one goal">🎯 Make a goal from this search…</button>`}</p>` +
+      (goalPick ? (()=>{ const on = groups.filter(g=>!g.rows[0].par && goalPickOn(g)); const n = on.reduce((k,g)=>k+g.rows.length,0);
+        return `<div class="gPickBar"><b>Goal “${esc(goalPick.q)}”: tick the checklists to collect (sets added later join automatically)</b>
+          <label class="chip"><input type="checkbox" id="gpAuto"${goalPick.noAuto?" checked":""}> Leave out autographs &amp; relics</label>
+          <button type="button" class="chip" id="gpAll">Tick all</button><button type="button" class="chip" id="gpNone">Untick all</button>
+          <button type="button" class="btn" id="gpSave"${on.length?"":" disabled"}>${goalPick.editId?"Save changes":"Save goal"} · ${on.length} checklist${on.length===1?"":"s"}, ${n} cards</button>
+          <button type="button" class="chip" id="gpCancel">Cancel</button></div>`; })() : "") +
+      groups.slice(goalPick ? 0 : 0, goalPick ? groups.length : deepN).map(g=>`<section class="dg${goalPick && !g.rows[0].par && !goalPickOn(g) ? " off" : ""}">${viewing?"":goalPick ? (g.rows[0].par ? `<span class="dgPick" style="font-weight:400;color:var(--muted)">parallel: make it its own goal</span>` : `<label class="dgPick"><input type="checkbox" data-gpk="${esc(g.s.id+"|"+g.sub)}"${goalPickOn(g)?" checked":""}> In goal</label>`) : `<button type="button" class="chip dgGoal" data-gset="${esc(g.s.id)}" data-gsub="${esc(g.rows[0].par ? "" : g.sub)}" data-gpar="${esc(g.rows[0].par ? g.rows[0].par.sid : "")}" data-gq="${esc(g.rows.length < goalBase(g.s.id, g.rows[0].par ? "" : g.sub, g.rows[0].par ? g.rows[0].par.sid : "") ? deepQ.trim() : "")}" title="Track just this checklist on Goals">🎯 Goal</button>`}
         <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
           <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
         <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span><span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
@@ -4128,7 +4147,19 @@ async function renderDeep(){
 }
 $("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; deepN = 60; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
 $("#spDeepRes").addEventListener("click", e=>{ if(e.target.id==="deepMore"){ deepN += 60; renderDeep(); return; }
-  if(e.target.id==="deepGoal"){ addGoal({setId:"*", q:deepQ}); return; }
+  if(e.target.id==="deepGoal"){ goalPick = {q: deepQ.trim(), skip: new Set(), noAuto: true, editId: ""}; renderDeep(); return; }
+  if(goalPick){
+    const k = e.target.closest("[data-gpk]");
+    if(k){ k.checked ? goalPick.skip.delete(k.dataset.gpk) : goalPick.skip.add(k.dataset.gpk);
+      if(k.checked && goalPick.noAuto && goalIsAuto({sub: k.dataset.gpk.split("|").slice(1).join("|")})) goalPick.noAuto = false;   // ticking an autograph checklist means you want it
+      renderDeep(); return; }
+    if(e.target.id==="gpAuto"){ goalPick.noAuto = e.target.checked; renderDeep(); return; }
+    if(e.target.id==="gpAll"){ goalPick.skip.clear(); goalPick.noAuto = false; renderDeep(); return; }
+    if(e.target.id==="gpNone"){ document.querySelectorAll("#spDeepRes [data-gpk]").forEach(x=>goalPick.skip.add(x.dataset.gpk)); renderDeep(); return; }
+    if(e.target.id==="gpCancel"){ goalPick = null; renderDeep(); return; }
+    if(e.target.id==="gpSave"){ const gp = goalPick; goalPick = null; addGoal({setId:"*", q:gp.q, skip:[...gp.skip], noAuto:gp.noAuto, editId:gp.editId}).then(renderDeep); return; }
+    if(e.target.closest(".dgPick")) return;
+  }
   const gb = e.target.closest("[data-gset]"); if(gb){ addGoal({setId:gb.dataset.gset, sub:gb.dataset.gsub, par:gb.dataset.gpar, q:gb.dataset.gq}); return; }
   const b = e.target.closest("[data-dset]"); if(!b) return;
   openSetPage(b.dataset.dset); if(b.dataset.dsub){ filt.sub = b.dataset.dsub; filt.cl = "all"; saveFilt(); render(); } });
@@ -4170,39 +4201,47 @@ $("#bxOpen").onclick = ()=>$("#openBoxBtn").click();
 
 /* ---------- goals: a set, insert, parallel or search to complete, with progress and the cost to finish ---------- */
 // a goal: {id, setId, sub ("" = the whole set), par (a parallel's sid), q (search words, e.g. "manchester united"), name, made}
-let goals = [], goalOpen = new Set(), goalDel = "";
-async function loadGoals(){ try{ goals = await getList("goals"); }catch{ goals = []; } if(view==="home") renderView(); }
+let goals = [], goalOpen = new Map(), goalDel = "";
+async function loadGoals(){ try{ goals = await getList("goals"); }catch{ goals = []; } if(view==="goals" || view==="home") renderView(); }
 async function saveGoals(change, tries){
   const base = await getList("goals").catch(()=>goals), next = change(base);
   const r = await fetch("/api/goals", {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(next, null, 1)});
   if(r.status===409 && (tries||0) < 3) return saveGoals(change, (tries||0)+1);
   if(!r.ok) throw new Error(await r.text() || "save failed");
-  goals = next; if(view==="home") renderView();
+  goals = next; if(view==="goals" || view==="home") renderView();
 }
+// autograph, relic and patch checklists (left out of a goal when you ask)
+const goalIsAuto = e => (e.tags||[]).includes("AU") || /\b(autographs?|signatures?|signed|auto|relics?|patch(es)?|memorabilia|swatch|jersey)\b/i.test(e.sub||"");
+// choosing the checklists of a search goal on the Sets page: {q, skip:Set("setId|sub"), noAuto, editId}
+let goalPick = null;
+const goalPickOn = g => goalPick && !goalPick.skip.has(g.s.id+"|"+g.sub) && !(goalPick.noAuto && goalIsAuto({sub:g.sub}));
 const goalWords = q => norm(q||"").split(/\s+/).filter(Boolean);
 // how many cards the checklist part has before the search words (to know whether the words narrow it)
 function goalBase(setId, sub, par){ const cat = catalogs[setId]; if(!cat) return 0;
   if(par){ const p = cat.parBySid.get(String(par)); return p ? p.cards.length : 0; }
   return cat.cards.filter(e=>!sub || (e.sub||"Base")===sub).length; }
 function goalName(g){
-  if(g.setId==="*") return `All “${g.q}” cards · every set`;
+  if(g.setId==="*") return `“${g.q}” cards · every set${g.noAuto?" · no autographs / relics":""}${(g.skip||[]).length?` · ${g.skip.length} checklist${g.skip.length===1?"":"s"} left out`:""}`;
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId], p = g.par && cat && cat.parBySid.get(String(g.par));
   return [s ? `${yearLabel(s.year)} ${s.name}` : "Set", p ? `${p.parent} · ${parLabel(p)}` : g.sub || "", g.q ? `“${g.q}”` : ""].filter(Boolean).join(" · ");
 }
 async function addGoal(g){
   if(viewing) return;
   if(g.setId==="*") await loadAllCatalogs(); else if(!catalogs[g.setId]) await loadCatalog(g.setId).catch(()=>null);
-  g = {id: "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay()};
+  const editId = g.editId;
+  g = {id: editId || "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay(), ...(g.setId==="*" ? {skip: [...(g.skip||[])], noAuto: !!g.noAuto} : {})};
   g.name = goalName(g);
-  if(goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q))){ toast("That's already one of your goals (on Home)"); return; }
-  try{ await saveGoals(list=>[...list, g]); toast(`🎯 Goal added: ${g.name} · see it on Home`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); }
+  if(editId){ try{ await saveGoals(list=>list.map(x=>x.id===editId ? {...g, made: x.made||g.made} : x)); toast(`🎯 Goal updated: ${g.name}`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); } return; }
+  if(g.setId!=="*" && goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q))){ toast("That's already one of your goals (on Goals)"); return; }
+  try{ await saveGoals(list=>[...list, g]); toast(`🎯 Goal added: ${g.name} · see it on Goals`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); }
 }
 // every card of a goal, whether you have it, a price to expect and which friend has a spare
 function goalRows(g){
   if(g.setId==="*"){   // one search across every set in the library ("golazo"): each set's matching base / insert cards
     const all = sets.filter(x=>x.status==="ready" && catalogs[x.id]), rows = [];
     if(!all.length) return null;
-    for(const s of all){ const r = goalRows({...g, setId:s.id, sub:"", par:"", _all:true}); if(r) rows.push(...r.rows); }
+    const skip = new Set(g.skip||[]);
+    for(const s of all){ const r = goalRows({...g, setId:s.id, sub:"", par:"", _all:true}); if(r) rows.push(...r.rows.filter(x=>!skip.has(s.id+"|"+(x.e.sub||"Base")) && !(g.noAuto && goalIsAuto(x.e)))); }
     return {s:null, cat:null, rows, sets: new Set(rows.map(x=>x.s.id)).size};
   }
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId]; if(!s || !cat) return null;
@@ -4212,9 +4251,9 @@ function goalRows(g){
   try{
     const w = goalWords(g.q), hit = e => !w.length || w.every(x=>norm([e.sub||"Base", e.player, e.team, e.n, e.rc?"rookie rc":"", g._all ? s.name : ""].join(" ")).includes(x));
     if(g.par){ const p = cat.parBySid.get(String(g.par)); if(!p) return null; const own = parOwnership(s, p);
-      rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, s, cat, have: (own.get(pkey(n,pl))||[]).length} : null; }).filter(Boolean); }
+      rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, s, cat, have: (own.get(pkey(n,pl))||[]).length, mine: own.get(pkey(n,pl))||[]} : null; }).filter(Boolean); }
     else { const own = ownership(s, cat);
-      rows = cat.cards.map((e,i)=>(!g.sub || (e.sub||"Base")===g.sub) && hit(e) ? {e, p:null, s, cat, have:(own.get(i)||[]).length} : null).filter(Boolean); }
+      rows = cat.cards.map((e,i)=>(!g.sub || (e.sub||"Base")===g.sub) && hit(e) ? {e, p:null, s, cat, have:(own.get(i)||[]).length, mine: own.get(i)||[]} : null).filter(Boolean); }
   } finally { cards = was; }
   return {s, cat, rows};
 }
@@ -4234,10 +4273,15 @@ function goalPrice(s, cat, e, p){
 function goalSpares(s, e, p){
   return friends.filter(f=>(f.cards||[]).filter(c=>!c.gone && sameCard(c, s, e, p)).reduce((n,c)=>n+(Number(c.qty)||1),0) >= 2).map(f=>f.name);
 }
+function renderGoalsPage(){
+  $("#vGoals").innerHTML = viewing ? `<p class="hint">Goals are your own: switch back to your collection to see them.</p>` : `<div class="pagehead"><div><h2>Goals</h2><p class="sub">Add one from a set (<b>🎯 Make this a goal</b>; pick an insert or parallel first to track just that) or from a search on <b>Sets</b> (e.g. “golazo” → <b>🎯 Make a goal from this search…</b>, then tick the checklists you want).</p></div></div>` + goalsHTML();
+}
+$("#vGoals").addEventListener("click", e=>{ if(goalClick(e)) return;
+  const sl = e.target.closest("[data-gcard]"); if(sl){ const c = myCards.find(x=>x.id===sl.dataset.gcard); if(c) openCardPage(c); } });
 function goalsHTML(){
   const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId]))].filter(id=>!catalogs[id] && sets.some(s=>s.id===id && s.status==="ready"));
-  if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="home") renderView(); }); }
-  if(!goals.length) return `<div class="sect-h"><h3>Goals</h3></div><p class="hint">No goals yet. Open a set and tap <b>🎯 Make this a goal</b> (pick an insert or parallel first to track just that). Or search on <b>Sets</b> (e.g. “golazo”) and tap <b>🎯 Make “golazo” a goal · every set</b> for every card of it across all sets, or <b>🎯 Goal</b> on one checklist.</p>`;
+  if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="goals" || view==="home") renderView(); }); }
+  if(!goals.length) return `<p class="hint"><b>No goals yet.</b></p>`;
   const tiles = goals.map(g=>{
     const r = goalRows(g);
     if(!r) return `<div class="goal"><div class="gTop"><b>${esc(g.name)}</b></div><small>${need.length?"Loading checklists…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
@@ -4245,22 +4289,27 @@ function goalsHTML(){
     const priced = miss.map(x=>({...x, price: goalPrice(x.s, x.cat, x.e, x.p), spare: goalSpares(x.s, x.e, x.p)}));
     const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), est = known.some(x=>x.price.est);
     priced.sort((a,b)=>(a.price?a.price.v:1e9)-(b.price?b.price.v:1e9) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
-    const spares = priced.filter(x=>x.spare.length).length, open = goalOpen.has(g.id);
+    const spares = priced.filter(x=>x.spare.length).length, open = goalOpen.get(g.id) || "";
+    const got = r.rows.filter(x=>x.have).sort((a,b)=>String(a.s.year).localeCompare(String(b.s.year)) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
     return `<div class="goal">
       <div class="gTop"><b>${esc(g.name)}</b><span class="gNum">${have}/${total}</span></div>${g.setId==="*"?`<small>${r.sets} set${r.sets===1?"":"s"} in the library · new sets count automatically</small>`:""}
       <div class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></div>
       ${have>=total && total ? `<span class="gDone">Complete! 🎉</span>` : `<small>${pctTxt(have,total)} · missing ${miss.length}${known.length?` · ${est||known.length<miss.length?"≈ ":""}${money(cost, true)} to finish${known.length<miss.length?` (${miss.length-known.length} without a price)`:""}`:""}${spares?` · friends have ${spares} spare${spares===1?"":"s"}`:""}</small>`}
-      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" aria-pressed="${open}">${open?"Hide missing":"Missing cards"}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
-      ${open ? `<ul>${priced.slice(0,200).map(x=>`<li><span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${g.setId==="*"?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?`${x.price.est?"~":""}${money(x.price.v)}`:"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: your or a friend's copy of the card; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
+      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${open==="miss"}">Missing ${miss.length}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${open==="have"}">I have ${have}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
+      ${open==="have" ? `<div class="gHave">${got.slice(0,300).map(x=>{ const c = x.mine[0]; const img = c && cardImg(c);
+          return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${g.setId==="*"?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
+      ${open==="miss" ? `<ul>${priced.slice(0,200).map(x=>`<li><span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${g.setId==="*"?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?`${x.price.est?"~":""}${money(x.price.v)}`:"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: your or a friend's copy of the card; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
     </div>`;
   }).join("");
-  return `<div class="sect-h"><h3>Goals</h3></div><div class="goals">${tiles}</div>`;
+  return `<div class="goals">${tiles}</div>`;
 }
 function goalClick(e){
-  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2]"); if(!t) return false;
-  if(t.dataset.gopen){ const id = t.dataset.gopen; goalOpen.has(id) ? goalOpen.delete(id) : goalOpen.add(id); renderView(); return true; }
+  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2],[data-gedit]"); if(!t) return false;
+  if(t.dataset.gedit){ const g = goals.find(x=>x.id===t.dataset.gedit); if(!g) return true;
+    setView("sets"); $("#spDeep").value = deepQ = g.q; goalPick = {q:g.q, skip:new Set(g.skip||[]), noAuto:!!g.noAuto, editId:g.id}; renderSetsPage(); renderDeep(); return true; }
+  if(t.dataset.gopen){ const id = t.dataset.gopen, tab = t.dataset.gtab; goalOpen.get(id)===tab ? goalOpen.delete(id) : goalOpen.set(id, tab); renderView(); return true; }
   if(t.dataset.gdel){ const id = t.dataset.gdel;
-    if(goalDel!==id){ goalDel = id; renderView(); setTimeout(()=>{ if(goalDel===id){ goalDel = ""; if(view==="home") renderView(); } }, 4000); return true; }
+    if(goalDel!==id){ goalDel = id; renderView(); setTimeout(()=>{ if(goalDel===id){ goalDel = ""; if(view==="goals" || view==="home") renderView(); } }, 4000); return true; }
     goalDel = ""; saveGoals(list=>list.filter(g=>g.id!==id)).then(()=>toast("Goal removed")).catch(err=>toast("Couldn't remove it: " + (err?.message||err))); return true; }
   const g = goals.find(x=>x.id===t.dataset.gset2); if(!g) return true;
   if(g.setId==="*"){ setView("sets"); sp.scope = "all"; saveSp(); renderSetsPage(); $("#spDeep").value = deepQ = g.q; deepN = 60; renderDeep(); return true; }
@@ -4290,7 +4339,6 @@ function renderHome(){
       <button type="button" class="kpi" data-go="sets"><b>${mySets.length}</b><small>Sets</small></button>
       ${bought.length?`<button type="button" class="kpi" data-go="gain"><b class="${g>0?"gain":g<0?"loss":""}">${signed(g)}</b><small>Gain / loss · ${bought.length} cards</small></button>`:""}
     </div>
-    ${!viewing ? goalsHTML() : ""}
     ${recentSets.length?`<div class="sect-h"><h3>Your sets</h3><button type="button" data-go="sets">See all sets →</button></div><div class="setgrid">${recentSets.map(setTile).join("")}</div>`:""}
     ${top.length?`<div class="sect-h"><h3>Most valuable</h3><button type="button" data-go="value">See all →</button></div><div class="homegrid">${stackTiles(top)}</div>`:""}
     ${boxes.length?`<div class="sect-h"><h3>Boxes</h3><button type="button" data-go="boxes">See all boxes →</button></div><div class="setgrid">${boxes.map(boxTile).join("")}</div>`:""}
@@ -4299,7 +4347,6 @@ function renderHome(){
     ${!C.length?`<div class="empty"><h2>${viewing?esc(viewing)+" has no cards yet":"Your binder is empty"}</h2>${viewing?"":"<p>Open <strong>Sets</strong> to find a set, then <strong>+ Add card</strong>.</p>"}</div>`:""}`;
 }
 $("#vHome").addEventListener("click", e=>{
-  if(goalClick(e)) return;
   const go = e.target.closest("[data-go]");
   if(go){ const k = go.dataset.go;
     if(k==="sets" || k==="boxes") return setView(k);
@@ -4348,10 +4395,12 @@ function renderView(){
   $("#navCards").textContent = cards.length ? cards.reduce((n,c)=>n+(Number(c.qty)||1),0) : "";
   $("#navSets").textContent = sets.filter(s=>s.status==="ready" && cardsOfSet(s).length).length || "";
   $("#navBoxes").textContent = boxGroups().length || "";
+  $("#navGoals").textContent = goals.length || "";
   $("#navTidy").textContent = myCards.filter(c=>c.review).length || "";
   tidyDot();
   if(view==="home") renderHome();
   else if(view==="sets") renderSetsPage();
+  else if(view==="goals") renderGoalsPage();
   else if(view==="boxes") renderBoxesPage();
   else if(view==="tidy") renderTidy();
   else renderSetHead();
