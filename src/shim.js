@@ -160,7 +160,7 @@ const NOT_ONLINE = {ok:false, error:"Not available in the online version."};
 async function api(url, method, rawBody){
   const u = new URL(url, location.href), p = u.pathname.replace(/^.*?\/api\//, "/api/");
   let m;
-  if((m = p.match(/^\/api\/(cards|history|sources|wants|goals)$/))){
+  if((m = p.match(/^\/api\/(cards|history|sources|wants|goals|goalprices)$/))){
     if(method === "GET") return J(await getDoc(m[1], []) || []);
     if(method === "PUT"){ const list = JSON.parse(await bodyText(rawBody)); if(!Array.isArray(list)) return T("Expected a list.", 400);
       try{ await putDoc(m[1], list, true); }catch(e){ if(e instanceof Stale) return T("Changed in another tab", 409); throw e; } return N(); }
