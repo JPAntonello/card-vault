@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794694669";
+const BUILD = "1794716452";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4428,6 +4428,7 @@ async function saveSetPics(setId, add){
 /* ---------- goals: a set, insert, parallel or search to complete, with progress and the cost to finish ---------- */
 // a goal: {id, setId, sub ("" = the whole set), par (a parallel's sid), q (search words, e.g. "manchester united"), name, made}
 let goals = [], goalOpen = new Map(), goalDel = "";
+const goalCatTried = new Set();   // checklists asked for once: one that fails to load is not asked for again and again
 async function loadGoals(){ try{ goals = await getList("goals"); }catch{ goals = []; } await loadGoalPrices(); if(view==="goals" || view==="home") renderView(); }
 async function saveGoals(change, tries){
   const base = await getList("goals").catch(()=>goals), next = change(base);
@@ -4544,8 +4545,8 @@ function renderGoalsPage(){
 $("#vGoals").addEventListener("click", e=>{ if(goalClick(e)) return;
   const sl = e.target.closest("[data-gcard]"); if(sl){ const c = myCards.find(x=>x.id===sl.dataset.gcard); if(c) openCardPage(c); } });
 function goalsHTML(){
-  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId]))].filter(id=>!catalogs[id] && sets.some(s=>s.id===id && s.status==="ready"));
-  if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="goals" || view==="home") renderView(); }); }
+  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId]))].filter(id=>!catalogs[id] && !goalCatTried.has(id) && sets.some(s=>s.id===id && s.status==="ready"));
+  if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; need.forEach(id=>goalCatTried.add(id)); Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="goals" || view==="home") renderView(); }); }
   if(!goals.length) return `<p class="hint"><b>No goals yet.</b></p>`;
   const tiles = goals.map(g=>{
     const r = goalRows(g);
@@ -5007,8 +5008,8 @@ function scpLinkSection(){
 }
 function goalTidySection(){
   if(!goals.length || viewing) return "";
-  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(x=>x.status==="ready").map(x=>x.id) : [g.setId]))].filter(id=>!catalogs[id] && sets.some(x=>x.id===id && x.status==="ready"));
-  if(need.length){ if(!goalTidySection.busy){ goalTidySection.busy = true; Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalTidySection.busy = false; if(view==="tidy") renderTidy(); }); }
+  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(x=>x.status==="ready").map(x=>x.id) : [g.setId]))].filter(id=>!catalogs[id] && !goalCatTried.has(id) && sets.some(x=>x.id===id && x.status==="ready"));
+  if(need.length){ if(!goalTidySection.busy){ goalTidySection.busy = true; need.forEach(id=>goalCatTried.add(id)); Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalTidySection.busy = false; if(view==="tidy") renderTidy(); }); }
     return `<section><h3>Goals</h3><p class="hint">Loading your goals' checklists…</p></section>`; }
   const all = goalMissingCards(); if(!all.length) return "";
   const sN = goalScpList().length, pN = goal130List().length, priced = all.filter(c=>Number((goalPrices[c.id.slice(2)]||{}).v)>0).length;
