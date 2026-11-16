@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794856788";
+const BUILD = "1794857112";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4878,7 +4878,7 @@ function openCardPage(c){
       </dl>
     </div></div>`;
   $("#cdActs").innerHTML = viewing ? "" : `<button type="button" class="btn" id="cdEdit">Edit</button>
-    ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">${scpCan(c) ? "Update price now" : "Search 130point now"}</button>`:""}
+    ${priceable(c)?`<button type="button" class="btn ghost" id="cdPrice">${c.scpUrl ? (Number(c.value)>0 ? "Update price now" : "Get price from SportsCardsPro") : scpCan(c) ? "Update price now" : "Search 130point now"}</button>`:""}
     ${n>1?`<button type="button" class="btn ghost" id="cdCopies">See the ${n} copies</button>`:""}
     <button type="button" class="btn ghost" id="cdGone">${c.gone?"I still have it":"Sold / traded…"}</button>
     ${!c.scpUrl && priceable(c) ? `<button type="button" class="btn ghost" id="cdAddScp" title="Paste this card's SportsCardsPro page: its price is read from there on every update">SportsCardsPro link</button>` : ""}
