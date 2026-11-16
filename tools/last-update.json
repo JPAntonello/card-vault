@@ -1,11 +1,17 @@
 [
  {
-  "set": "2025/26 Topps Chrome Premier League",
-  "cards": 0,
-  "bySubset": {},
-  "parallels": [
-   "Lightning Chrome Gold"
-  ],
-  "players": []
+  "set": "2023/24 Topps Chrome UEFA Women's Champions League",
+  "cards": 5,
+  "bySubset": {
+   "Hidden Gems": 5
+  },
+  "parallels": [],
+  "players": [
+   "#HG-1 Aitana Bonmatí",
+   "#HG-2 Ada Hegerberg",
+   "#HG-3 Sam Kerr",
+   "#HG-4 Corventina",
+   "#HG-5 Linda Caicedo"
+  ]
  }
 ]
