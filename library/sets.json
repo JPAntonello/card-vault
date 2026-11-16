@@ -1120,5 +1120,82 @@
     "count": 156,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/261664/2021-Topps-Living-UEFA-Champions-League",
     "note": "TCDB: 2021 Topps Living UEFA Champions League · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving19",
+    "year": "2019",
+    "name": "Topps Living UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 105,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/203444/2019-Topps-Living-UEFA-Champions-League",
+    "note": "TCDB: 2019 Topps Living UEFA Champions League · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving20",
+    "year": "2020",
+    "name": "Topps Living UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 159,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/222551/2020-Topps-Living-UEFA-Champions-League",
+    "note": "TCDB: 2020 Topps Living UEFA Champions League · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving22",
+    "year": "2022",
+    "name": "Topps Living UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 89,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/295008/2022-Topps-Living-UEFA-Champions-League",
+    "note": "TCDB: 2022 Topps Living UEFA Champions League · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving23",
+    "year": "2023",
+    "name": "Topps Living UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 129,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/355767/2023-Topps-Living-UEFA-Club-Competitions",
+    "note": "TCDB: 2023 Topps Living UEFA Club Competitions · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving24",
+    "year": "2024",
+    "name": "Topps Living UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 117,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/405642/2024-Topps-Living-UEFA-Club-Competitions",
+    "note": "TCDB: 2024 Topps Living UEFA Club Competitions · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving25",
+    "year": "2025",
+    "name": "Topps Living UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 91,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/479014/2025-Topps-Living-UEFA-Club-Competitions",
+    "note": "TCDB: 2025 Topps Living UEFA Club Competitions · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvtliving26",
+    "year": "2026",
+    "name": "Topps Living UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T14:18:55.000Z",
+    "count": 90,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/585894/2026-Topps-Living-UEFA-Club-Competitions",
+    "note": "TCDB: 2026 Topps Living UEFA Club Competitions · 1 subsets · 0 parallels"
   }
 ]
