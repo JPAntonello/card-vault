@@ -1098,5 +1098,27 @@
     "count": 788,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/467821/2024-25-Topps-UEFA-Club-Competitions",
     "note": "TCDB: 2024 25 Topps UEFA Club Competitions · 30 subsets · 122 parallels"
+  },
+  {
+    "id": "mvtfcb2122",
+    "year": "2021/22",
+    "name": "Topps FC Barcelona Team Set",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T13:54:28.000Z",
+    "count": 70,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/291581/2021-22-Topps-FC-Barcelona-Team-Set",
+    "note": "TCDB: 2021 22 Topps FC Barcelona Team Set · 2 subsets · 12 parallels"
+  },
+  {
+    "id": "mvtliving21",
+    "year": "2021",
+    "name": "Topps Living UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-16T13:54:28.000Z",
+    "count": 156,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/261664/2021-Topps-Living-UEFA-Champions-League",
+    "note": "TCDB: 2021 Topps Living UEFA Champions League · 1 subsets · 0 parallels"
   }
 ]
