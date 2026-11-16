@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794856764";
+const BUILD = "1794856788";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4427,6 +4427,14 @@ async function saveSetPics(setId, add){
   setPics[setId] = next; return n;
 }
 
+// cards you already added that were on a goal but came in without their link / photo / price: fill them once
+function fillFromGoals(){
+  if(viewing || !Object.keys(goalPrices).length) return;
+  const need = myCards.filter(c=>{ const w = withKnownScp(c); return (w.scpUrl && !c.scpUrl) || (w.image && !c.image && !c.photo) || (Number(w.value)>0 && !(Number(c.value)>0)); });
+  if(!need.length) return;
+  const ids = new Set(need.map(c=>c.id));
+  commit("cards", all=>all.map(c=>ids.has(c.id) ? withKnownScp(c) : c)).then(()=>toast(`🎯 ${need.length} card${need.length===1?"":"s"} from your goals got their SportsCardsPro link and photo`)).catch(()=>{});
+}
 // what is already known about a card before you have it: the goal price search and the set's checklist photos
 function withKnownScp(c){
   if(!c || !c.setId) return c;
@@ -4446,7 +4454,7 @@ function withKnownScp(c){
 // a goal: {id, setId, sub ("" = the whole set), par (a parallel's sid), q (search words, e.g. "manchester united"), name, made}
 let goals = [], goalOpen = new Map(), goalDel = "";
 const goalCatTried = new Set();   // checklists asked for once: one that fails to load is not asked for again and again
-async function loadGoals(){ try{ goals = await getList("goals"); }catch{ goals = []; } await loadGoalPrices(); if(view==="goals" || view==="home") renderView(); }
+async function loadGoals(){ try{ goals = await getList("goals"); }catch{ goals = []; } await loadGoalPrices(); fillFromGoals(); if(view==="goals" || view==="home") renderView(); }
 async function saveGoals(change, tries){
   const base = await getList("goals").catch(()=>goals), next = change(base);
   const r = await fetch("/api/goals", {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(next, null, 1)});
