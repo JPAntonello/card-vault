@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794838741";
+const BUILD = "1794856764";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1503,6 +1503,8 @@ async function commit(name, change, tries){
       if(v>0 && (!o || Number(o.value)!==v)) c = {...c, valueHist: [...(c.valueHist||[]).filter(x=>x.d!==d), {d, v}].slice(-20)};
       // a photo you marked "Wrong photo" on this card is never put back, whatever brings it (TCDB, SportsCardsPro, a sale, the shared photos)
       if(c.image && (c.badPics||[]).includes(c.image)) c = {...c, image:"", imageSource:""};
+      // a new card that was on a goal (or has a checklist photo) brings its SportsCardsPro link, price and photo with it
+      if(!o) c = withKnownScp(c);
       return c; });
   }
   // a box is open: every card added now belongs to it
@@ -4423,6 +4425,21 @@ async function saveSetPics(setId, add){
   const w = await fetch("/api/setpics/" + encodeURIComponent(setId), {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(next)});
   if(!w.ok){ toast("Couldn't save the checklist photos: " + await w.text()); return 0; }
   setPics[setId] = next; return n;
+}
+
+// what is already known about a card before you have it: the goal price search and the set's checklist photos
+function withKnownScp(c){
+  if(!c || !c.setId) return c;
+  const num = normNum(c.number), pl = pnk(c.player), par = String(c.parallelSid||"");
+  const same = k => { const [sid, n, p, ps] = k.split("|"); return sid===c.setId && normNum(n)===num && pnk(p)===pl && String(ps||"")===par; };
+  const gk = Object.keys(goalPrices).find(same), g = gk ? goalPrices[gk] : null;
+  const spk = Object.keys(setPics[c.setId]||{}).find(same), sp = spk ? setPics[c.setId][spk] : "";
+  const out = {...c};
+  if(g && g.scpUrl && !out.scpUrl){ out.scpUrl = g.scpUrl; out.scpNew = true; out.scpNone = ""; }
+  if(g && Number(g.v)>0 && g.src==="SportsCardsPro" && !(Number(out.value)>0)) Object.assign(out, {value: Number(g.v), valueSource: "SportsCardsPro", valueDate: g.d || isoDay(), valueUrl: g.scpUrl || g.url || "", valueNote: "Ungraded · SportsCardsPro"});
+  const pic = (g && g.pic) || (sp ? pcImg(sp, 1600) : "");
+  if(pic && !out.image && !out.photo && !(out.badPics||[]).includes(pic)) Object.assign(out, {image: pic, imageSource: "SCP"});
+  return out;
 }
 
 /* ---------- goals: a set, insert, parallel or search to complete, with progress and the cost to finish ---------- */
