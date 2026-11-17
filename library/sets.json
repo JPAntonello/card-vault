@@ -1197,5 +1197,16 @@
     "count": 90,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/585894/2026-Topps-Living-UEFA-Club-Competitions",
     "note": "TCDB: 2026 Topps Living UEFA Club Competitions · 1 subsets · 0 parallels"
+  },
+  {
+    "id": "mvpaxl1415",
+    "year": "2014/15",
+    "name": "Panini Adrenalyn XL UEFA Champions League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-17T14:13:39.000Z",
+    "count": 435,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/98368/2014-15-Panini-Adrenalyn-XL-UEFA-Champions-League",
+    "note": "TCDB: 2014 15 Panini Adrenalyn XL UEFA Champions League · 16 subsets · 0 parallels"
   }
 ]
