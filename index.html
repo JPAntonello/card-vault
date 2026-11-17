@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794924826";
+const BUILD = "1794924939";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2696,7 +2696,9 @@ const firstYear = c => { const y = String(c.year||""); const m = y.match(/\d{4}/
 // matching SportsCardsPro rows to a card: same player, number, year, the set's own words (Chrome, Carnaval, Superstars…)
 // and exactly its version (the [bracket] on SportsCardsPro: none for a base card)
 const SCP_COMMON = new Set("topps panini uefa club competitions soccer fifa league premier the of edition cards card set team football futbol women s".split(" "));
-const scpSetWords = c => nrm(c.set).replace(/^\d{2,4}[- /]\d{2,4} /,"").split(" ").filter(w=>w && !SCP_COMMON.has(w) && !/^\d/.test(w));
+const scpSetWords = c => { const w = nrm(c.set).replace(/^\d{2,4}[- /]\d{2,4} /,"").split(" ").filter(w=>w && !SCP_COMMON.has(w) && !/^\d/.test(w));
+  // SportsCardsPro leaves "Champions League" out of some names ("2025 Topps Stadium Club Chrome UEFA"): not needed when other words name the set
+  const rest = w.filter(x=>x!=="champions"); return rest.length ? rest : w; };
 function scpPick(c, rows){
   // the number as printed ("ILU-5"): nrm() would turn the dash into a space and no insert number would ever match
   const last = nrm(c.player).split(" ").pop(), num = String(c.number||"").replace(/^#/,"").trim().toLowerCase();
