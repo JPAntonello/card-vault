@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794925300";
+const BUILD = "1794925551";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2661,7 +2661,7 @@ $("#bmLink").href = BOOKMARKLET;
 $("#bmLink").addEventListener("click", e=>{ e.preventDefault(); toast("Drag this button to your bookmarks bar, then use it on a TCDB page."); });
 // a TCDB photo that TCDB doesn't have (the bookmark found none) is not asked for again for 30 days
 const tcdbNoneNow = c => c.tcdbNone && Date.now()-Date.parse(c.tcdbNone) < 30*DAY;
-const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && !c.noTcdbPhoto && !tcdbNoneNow(c) && ((!c.image && !c.photo) || c.replacePhoto));
+const pendingPhotos = () => cards.filter(c=>c.tcdbFile && c.tcdbPath && !c.noTcdbPhoto && !tcdbNoneNow(c) && ((!c.image && !c.photo) || c.replacePhoto || (!c.photo && saleSourced(c))));   // TCDB's photo is preferred: it replaces a SportsCardsPro / sale one
 async function markTcdbNone(names){
   const set = new Set(names||[]); if(!set.size) return;
   try{ await commit("cards", all=>all.map(c=> c.tcdbFile && set.has(c.tcdbFile) ? {...c, tcdbNone: isoDay()} : c)); renderPhotoBar(); }catch{}
@@ -3517,7 +3517,7 @@ async function linkArrivedPhotos(){
     const ready = waiting.filter(c=>have.has(c.tcdbFile));
     if(ready.length){
       const ids = new Map(ready.map(c=>[c.id, c.tcdbFile]));
-      await commit("cards", list=>list.map(c=> ids.has(c.id) && (!c.image || c.replacePhoto) ? {...c, image: ids.get(c.id), photo:"", imageSource:"TCDB", replacePhoto:false, tcdbFile:"", tcdbPath:""} : c));
+      await commit("cards", list=>list.map(c=> ids.has(c.id) && (!c.image || c.replacePhoto || (!c.photo && saleSourced(c))) ? {...c, image: ids.get(c.id), photo:"", imageSource:"TCDB", replacePhoto:false, tcdbFile:"", tcdbPath:""} : c));
       toast(`${ready.length} TCDB photo${ready.length===1?"":"s"} added`);
     }
   } catch {} finally { linking = false; }
@@ -3918,7 +3918,7 @@ async function restoreTcdbRefs(){
   await dropSalePhotos();
   await dropSaleChecks();
   syncRookies();
-  const todo = cards.filter(c=>c.setId && !c.tcdbFile && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));
+  const todo = cards.filter(c=>c.setId && (!c.tcdbFile || !c.tcdbPath) && !c.noTcdbPhoto && c.status!=="pending" && ((!c.image && !c.photo) || saleSourced(c)));   // also a TCDB photo name with no address to fetch it
   if(!todo.length) return;
   await loadDrive().catch(()=>{});
   const have = new Set((driveFiles||[]).map(f=>f.p)), upd = new Map();
