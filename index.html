@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794924939";
+const BUILD = "1794925300";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2980,7 +2980,7 @@ async function getSalePhotos(){
   if(!now.length) toast("Their sales had no photo. Open a card to add your own.");
 }
 // a card that wants its photo from SportsCardsPro: none yet (or only a sale photo), and TCDB has none
-const wantsScpPic = c => ((!c.image && !c.photo) || c.imageSource==="Sale") && !c.noSalePic && (!c.tcdbFile || tcdbNoneNow(c));
+const wantsScpPic = c => ((!c.image && !c.photo) || c.imageSource==="Sale") && !c.noSalePic;   // a TCDB photo that was never brought in does not stop the SportsCardsPro one
 const scpList = () => myCards.filter(c=>((!c.image && !c.photo) || c.imageSource==="Sale") && c.status!=="pending" && c.player && c.number && (!c.tcdbFile || tcdbNoneNow(c)) && !(c.photoTried && Date.now()-Date.parse(c.photoTried) < 7*DAY));
 $("#salePhotos").onclick = ()=>getSalePhotos();
 $("#findPhotos").onclick = ()=>{
