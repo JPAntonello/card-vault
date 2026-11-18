@@ -1230,5 +1230,16 @@
     "count": 106,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/383053/2023-24-Topps-The-Lost-Rookies",
     "note": "TCDB: 2023 24 Topps The Lost Rookies · 7 subsets · 8 parallels"
+  },
+  {
+    "id": "mvfutnos2024",
+    "year": "2024",
+    "name": "Futera Unique Nostalgia",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-18T19:01:48.000Z",
+    "count": 2152,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/423011/2024-Futera-Unique-Nostalgia",
+    "note": "TCDB: 2024 Futera Unique Nostalgia · 45 subsets · 165 parallels"
   }
 ]
