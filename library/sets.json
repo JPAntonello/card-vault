@@ -1208,5 +1208,16 @@
     "count": 435,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/98368/2014-15-Panini-Adrenalyn-XL-UEFA-Champions-League",
     "note": "TCDB: 2014 15 Panini Adrenalyn XL UEFA Champions League · 16 subsets · 0 parallels"
+  },
+  {
+    "id": "mvfinest2526ucc",
+    "year": "2025/26",
+    "name": "Topps Finest UEFA Club Competitions",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-18T17:40:33.000Z",
+    "count": 8849,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/647541/2025-26-Finest-UEFA-Club-Competitions",
+    "note": "TCDB: 2025 26 Finest UEFA Club Competitions · 38 subsets · 95 parallels"
   }
 ]
