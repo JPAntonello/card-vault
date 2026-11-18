@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794972749";
+const BUILD = "1795010967";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2715,6 +2715,7 @@ function scpPick(c, rows){
     if(y && !(season ? [y] : [y, y-1]).some(v=>t.includes(" "+v+" "))) return false;
     if(!setw.every(w=>t.includes(" "+w+" "))) return false;
     if(bw.some(w=>!mine.has(w))) return false;
+    if(/refractor/i.test(br) && !nrm(c.parallel).trim() && !/refractor/.test(nrm(c.variant))) return false;   // a base Chrome card is not its "[Refractor]" parallel
     if(parw.some(w=>!bw.includes(w))) return false;
     return true;
   });
