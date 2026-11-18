@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1794940305";
+const BUILD = "1794972749";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2178,7 +2178,7 @@ function shrinkPhoto(file){
       URL.revokeObjectURL(url);
       cv.toBlob(b=>b?resolve(b):reject(new Error("photo could not be read")),"image/jpeg",0.85);
     };
-    img.onerror = ()=>reject(new Error("photo could not be read"));
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error("photo could not be read")); };
     img.src = url;
   });
 }
