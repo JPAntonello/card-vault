@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795024870";
+const BUILD = "1795024941";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1946,7 +1946,7 @@ function cardTile(c, totalQty, group){
 
 /* ---------- Drive image picker ---------- */
 let driveFiles = null, driveOk = true, driveDir = "", chosenImage = "", imgQTouched = false;
-const norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/ø/g,"o").replace(/æ/g,"ae").replace(/ß/g,"ss").replace(/[đð]/g,"d").replace(/ł/g,"l").replace(/ı/g,"i");
 const driveUrl = p => cvDriveUrl(p);   // SportsCardsPro photos are kept as their web address
 const photoSrc = (id, v) => cvPhotoUrl(id, v);
 const cardImg = c => c.photo ? photoSrc(c.photo, c.photoV) : c.image ? driveUrl(c.image) : "";
