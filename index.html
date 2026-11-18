@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795010967";
+const BUILD = "1795024870";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2060,6 +2060,8 @@ function setMode(m){
   mode = m;
   document.querySelectorAll("#modeTabs .chip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.mode===m));
   document.querySelectorAll("#f [data-show]").forEach(el=>el.hidden = !el.dataset.show.split(" ").includes(m));
+  { const o = $("#f_setid option[value='*mix']"); if(o){ o.hidden = !(m==="bulk" || m==="box"); if(o.hidden && o.selected){ const n = o.nextElementSibling; if(n){ n.selected = true; onSetChange(); } } } }
+  $("#f_bulk").placeholder = (m==="bulk" || m==="box") && $("#f_setid").value==="*mix" ? "Dembele PF-23\nSaka 1 stadium club chrome\nOdegaard CS-9 gold x2" : "1, 5, 12-20, CA-LS";
   if(m==="bulk" || m==="box") renderBulk();
   if(m==="box"){ $("#f_boxCur").value = curCode(); $("#bulkverL").textContent = "Version for numbers without a colour"; } else $("#bulkverL").textContent = "Version";
   if(m==="find") renderFind();
@@ -2071,11 +2073,15 @@ function setMode(m){
 function fillSetSelect(selected){
   const rs = readySets();
   $("#f_setid").innerHTML = rs.length
-    ? rs.map(s=>`<option value="${esc(s.id)}"${s.id===selected?" selected":""}>${esc(s.year)} ${esc(s.name)} · ${esc(s.sport)}</option>`).join("")
+    ? `<option value="*mix"${selected==="*mix"?" selected":""}${mode==="bulk"||mode==="box"?"":" hidden"}>Mixed sets: one card per line, any set</option>` + rs.map(s=>`<option value="${esc(s.id)}"${s.id===selected?" selected":""}>${esc(s.year)} ${esc(s.name)} · ${esc(s.sport)}</option>`).join("")
     : `<option value="">No sets loaded yet</option>`;
+  if(rs.length && !rs.some(x=>x.id===selected) && selected!=="*mix") $("#f_setid").value = rs[0].id;
 }
+const mixMode = () => (mode==="bulk" || mode==="box") && $("#f_setid").value==="*mix";
 async function onSetChange(){
   const id = $("#f_setid").value; $("#setNums").innerHTML = "";
+  $("#f_bulk").placeholder = id==="*mix" ? "Dembele PF-23\nSaka 1 stadium club chrome\nOdegaard CS-9 gold x2" : "1, 5, 12-20, CA-LS";
+  if(id==="*mix"){ if(mode==="bulk" || mode==="box"){ renderBulk(); await loadAllCatalogs(); renderBulk(); } return; }
   if(!id){ updateMatch(); return }
   try{
     const cat = await loadCatalog(id);
@@ -2284,7 +2290,25 @@ function parFromWords(cat, entry, k, words, serial){
     .sort((a,b)=>parWords(a).length-parWords(b).length || String(a.name).length-String(b.name).length);
   return cands;
 }
+// mixed sets: every line is searched in every loaded checklist, like Find card ("Dembele PF-23", "Saka 1 chrome gold x2")
+function mixRows(){
+  const rows = [];
+  String($("#f_bulk").value).split(/\n/).forEach((line, li)=>{
+    let qty = 1; const q = line.replace(/(^|\s)(?:x(\d{1,2})|(\d{1,2})x)(?=\s|$)/i, (m0, sp, a, b)=>{ qty = Math.max(1, +(a||b)); return " "; }).trim();
+    if(!q) return;
+    const hits = findResults(q).slice(0, 15), pk = "m" + li + "|" + norm(q);
+    const pick = Math.min(bulkPick[pk]||0, Math.max(hits.length-1, 0)), h = hits[pick];
+    let par = null;
+    if(h && h.par){ const cat = catalogs[h.set.id], p = h.par.p; par = {p, cid: p.map.get(pkey(h.e.n, h.e.player)) || p.map.get(normNum(h.e.n))}; }
+    const k = h ? h.set.id + "|" + normNum(h.e.n) + "|" + h.e.player + (par ? "|" + par.p.sid : "") : pk;
+    rows.push({tok: q, k, pk, hits, entries: hits.map(x=>x.e), entry: h ? h.e : null, set: h ? h.set : null, pick, par, why: "No card matches in your loaded sets", qty, on: !bulkOff.has(k)});
+  });
+  const merged = new Map();
+  for(const r of rows){ const m = merged.get(r.k); if(m && r.entry){ m.qty += r.qty; } else merged.set(r.k, r); }
+  return [...merged.values()];
+}
 function bulkRows(){
+  if(mixMode()) return mixRows();
   const set = sets.find(x=>x.id===$("#f_setid").value), cat = set && catalogs[set.id];
   const p = cat && $("#f_bulkver").value ? cat.parBySid.get($("#f_bulkver").value) : null;
   const rows = parseLines($("#f_bulk").value).map(({tok, words, serial, qty})=>{
@@ -2317,6 +2341,19 @@ function bulkRows(){
 function renderBulk(){
   queueMicrotask(renderLot);
   const box = $("#bulkList"), set = sets.find(x=>x.id===$("#f_setid").value);
+  if(mixMode()){
+    $("#f_bulkver").closest("label").hidden = true;
+    if(readySets().some(s=>!catalogs[s.id])){ box.innerHTML = `<p class="sum">Loading every checklist…</p>`; return }
+    const rows = bulkRows();
+    if(!rows.length){ box.innerHTML = `<p class="sum">One card per line: player and number, plus the set or colour if needed (Saka 1 stadium club chrome · Odegaard CS-9 gold · x2 for two copies).</p>`; return }
+    const ok = rows.filter(r=>r.entry && r.on), miss = rows.filter(r=>!r.entry), n = ok.reduce((t,r)=>t+(r.qty||1),0);
+    const lab = h => `${h.set.year} ${h.set.name} · #${h.e.n} ${h.e.player} · ${entryLabel(h.e)}${h.par?" · "+parLabel(h.par.p):""}`;
+    box.innerHTML = `<p class="sum"><b>${n} card${n===1?"":"s"}</b> will be added${miss.length?` · not found: ${esc(miss.map(r=>r.tok).join(", "))}`:""}${ok.some(r=>r.hits.length>1)?" · check the sets: a line with a menu matched more than one card":""}</p>`
+      + rows.map(r => r.entry
+        ? `<label class="brow"><input type="checkbox" data-k="${esc(r.k)}"${r.on?" checked":""}><span class="n">#${esc(r.entry.n)}${r.qty>1?` ×${r.qty}`:""}</span><span class="pl">${esc(r.entry.player)}${r.entry.rc?' <span class="pill hot">RC</span>':""}${(r.entry.tags||[]).includes("AU")?' <span class="pill hot">Auto</span>':""}<br><small>${esc(r.set.year+" "+r.set.name)} · ${esc(entryLabel(r.entry))}${r.par?" · "+esc(parLabel(r.par.p)):""}</small></span>${r.hits.length>1?`<select data-pick="${esc(r.pk)}" aria-label="Which card for ${esc(r.tok)}">${r.hits.map((h,i)=>`<option value="${i}"${i===r.pick?" selected":""}>${esc(lab(h))}</option>`).join("")}</select>`:""}</label>`
+        : `<div class="brow miss"><span class="n">${esc(r.tok)}</span><span class="pl">${esc(r.why)}</span></div>`).join("");
+    return;
+  }
   if(!set){ box.innerHTML = ""; return }
   if(!catalogs[set.id]){ box.innerHTML = `<p class="sum">Loading checklist…</p>`; return }
   fillBulkVersions(catalogs[set.id]);
@@ -2330,10 +2367,10 @@ function renderBulk(){
       : `<div class="brow miss"><span class="n">#${esc(r.tok)}</span><span class="pl">${esc(r.why)}</span></div>`).join("");
 }
 async function saveBulk(common, fail){
-  const set = sets.find(x=>x.id===$("#f_setid").value);
-  if(!set) return fail("Request a set first under Sets.");
+  const mix = mixMode(), set = mix ? null : sets.find(x=>x.id===$("#f_setid").value);
+  if(!mix && !set) return fail("Request a set first under Sets.");
   const rows = bulkRows().filter(r=>r.entry && r.on);
-  if(!rows.length) return fail("Type at least one card number from this checklist.");
+  if(!rows.length) return fail(mix ? "Type at least one card, one per line." : "Type at least one card number from this checklist.");
   try{
     await loadDrive();
     const have = new Set((driveFiles||[]).map(f=>f.p)), t0 = Date.now();
@@ -2346,10 +2383,11 @@ async function saveBulk(common, fail){
     const share = i => lotCents==null ? null : Math.floor(lotCents/units) / 100;
     const cur = isBox ? $("#f_boxCur").value : curCode(), boxId = isBox ? "box" + newId() : "";
     const fresh = rows.map((r,i)=>{
-      const d = setCardData(set, r.entry, share(i)==null ? common : {...common, paid: share(i), paidCur: cur}, r.par);
+      const st = r.set || set;
+      const d = setCardData(st, r.entry, share(i)==null ? common : {...common, paid: share(i), paidCur: cur}, r.par);
       Object.assign(d, {id: newId() + i.toString(36), added: new Date(t0 + i).toISOString(), photo:"", photoV:"", image:"", imageUrl:"", tcdbFile:"", tcdbPath:"", qty: r.qty||1});
       if(isBox) Object.assign(d, {box: {id: boxId, total: boxTotal, cur, day: isoDay()}, boxSplit: "pending"});
-      const ref = refFor(set, r.entry, r.par);
+      const ref = refFor(st, r.entry, r.par);
       if(ref){ const file = safeName(ref.name) + ".jpg"; if(have.has(file)) d.image = file; else { d.tcdbFile = file; d.tcdbPath = tcdbPath(ref); } }
       return d;
     });
@@ -2362,7 +2400,7 @@ async function saveBulk(common, fail){
       const list = fresh.filter(priceable);
       if(list.length) price130(list);
       toast(`Box added: ${units} card${units===1?"":"s"}. Click Card Vault search on the SportsCardsPro tab: the box cost is split by value when prices arrive`);
-    } else toast(`Added ${units} card${units===1?"":"s"} from ${set.year} ${set.name}`);
+    } else toast(mix ? `Added ${units} card${units===1?"":"s"} from ${new Set(rows.map(r=>r.set.id)).size} set${new Set(rows.map(r=>r.set.id)).size===1?"":"s"}` : `Added ${units} card${units===1?"":"s"} from ${set.year} ${set.name}`);
   }catch(err){ fail("Couldn't save: "+(err?.message||"check your internet connection")) }
 }
 
