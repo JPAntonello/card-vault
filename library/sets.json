@@ -1219,5 +1219,16 @@
     "count": 8849,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/647541/2025-26-Finest-UEFA-Club-Competitions",
     "note": "TCDB: 2025 26 Finest UEFA Club Competitions · 38 subsets · 95 parallels"
+  },
+  {
+    "id": "mvtlost2324",
+    "year": "2023/24",
+    "name": "Topps The Lost Rookies",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-18T18:37:06.000Z",
+    "count": 106,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/383053/2023-24-Topps-The-Lost-Rookies",
+    "note": "TCDB: 2023 24 Topps The Lost Rookies · 7 subsets · 8 parallels"
   }
 ]
