@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795024941";
+const BUILD = "1795025199";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2081,7 +2081,7 @@ const mixMode = () => (mode==="bulk" || mode==="box") && $("#f_setid").value==="
 async function onSetChange(){
   const id = $("#f_setid").value; $("#setNums").innerHTML = "";
   $("#f_bulk").placeholder = id==="*mix" ? "Dembele PF-23\nSaka 1 stadium club chrome\nOdegaard CS-9 gold x2" : "1, 5, 12-20, CA-LS";
-  if(id==="*mix"){ if(mode==="bulk" || mode==="box"){ renderBulk(); await loadAllCatalogs(); renderBulk(); } return; }
+  if(id==="*mix"){ mixCache.clear(); if(mode==="bulk" || mode==="box"){ renderBulk(); await loadAllCatalogs(); renderBulk(); } return; }
   if(!id){ updateMatch(); return }
   try{
     const cat = await loadCatalog(id);
@@ -2193,20 +2193,20 @@ function shrinkPhoto(file){
 /* ---------- find a card in every loaded set ---------- */
 let findHits = [], fromFind = false;
 async function loadAllCatalogs(){ await Promise.all(readySets().map(s=>loadCatalog(s.id).catch(()=>null))); }
+const findHay = new WeakMap();   // each checklist card's search text, worked out once
 function findResults(q){
   const raw = (q ?? $("#f_find").value).trim();
   const toks = raw.split(/[\s,;#]+/).filter(Boolean);
   if(!toks.length) return [];
-  const out = [];
+  const out = [], tokN = toks.map(t=>[t, norm(t), normNum(t)]);
   for(const set of readySets()){
     const cat = catalogs[set.id]; if(!cat) continue;
     const setHay = norm([set.year, String(set.year).replace("/","-"), set.name].join(" "));
     for(const e of cat.cards){
-      const hay = norm([e.player, e.team, e.sub, (e.tags||[]).includes("AU")?"auto autograph":"", e.rc?"rookie rc":""].join(" ")) + " " + setHay;
-      const nn = normNum(e.n);
+      let hn = findHay.get(e); if(!hn){ hn = [norm([e.player, e.team, e.sub, (e.tags||[]).includes("AU")?"auto autograph":"", e.rc?"rookie rc":""].join(" ")) + " " + setHay, normNum(e.n)]; findHay.set(e, hn); }
+      const [hay, nn] = hn;
       let ok = true, numHit = false, left = [];
-      for(const t of toks){
-        const tn = norm(t), tk = normNum(t);
+      for(const [t, tn, tk] of tokN){
         if(tk && tk===nn){ numHit = true; continue; }
         if(/^\d+$/.test(t) && t.length<4){ ok = false; break; }   // a short number must be the card number
         if(hay.includes(tn)) continue;
@@ -2291,12 +2291,14 @@ function parFromWords(cat, entry, k, words, serial){
   return cands;
 }
 // mixed sets: every line is searched in every loaded checklist, like Find card ("Dembele PF-23", "Saka 1 chrome gold x2")
+const mixCache = new Map();   // line typed -> matches (each line is searched once, not on every key)
 function mixRows(){
   const rows = [];
   String($("#f_bulk").value).split(/\n/).forEach((line, li)=>{
     let qty = 1; const q = line.replace(/(^|\s)(?:x(\d{1,2})|(\d{1,2})x)(?=\s|$)/i, (m0, sp, a, b)=>{ qty = Math.max(1, +(a||b)); return " "; }).trim();
     if(!q) return;
-    const hits = findResults(q).slice(0, 15), pk = "m" + li + "|" + norm(q);
+    const ck = norm(q); let hits = mixCache.get(ck); if(!hits){ hits = findResults(q).slice(0, 15); mixCache.set(ck, hits); if(mixCache.size > 300) mixCache.delete(mixCache.keys().next().value); }
+    const pk = "m" + li + "|" + norm(q);
     const pick = Math.min(bulkPick[pk]||0, Math.max(hits.length-1, 0)), h = hits[pick];
     let par = null;
     if(h && h.par){ const cat = catalogs[h.set.id], p = h.par.p; par = {p, cid: p.map.get(pkey(h.e.n, h.e.player)) || p.map.get(normNum(h.e.n))}; }
@@ -2578,7 +2580,7 @@ $("#thumbs").onclick=e=>{const b=e.target.closest(".thumb"); if(b){ chosenImage 
 $("#imgClear").onclick=()=>{ chosenImage=""; renderThumbs(); };
 ["#f_desc","#f_player","#f_set"].forEach(s=>$(s).addEventListener("input",suggestImgQuery));
 $("#f_setnum").addEventListener("input",updateMatch);
-$("#f_bulk").addEventListener("input",renderBulk);
+let bulkT = 0; $("#f_bulk").addEventListener("input",()=>{ clearTimeout(bulkT); if(mixMode()) bulkT = setTimeout(renderBulk, 450); else renderBulk(); });   // mixed sets: search when typing pauses
 function renderLot(){
   const t = $("#f_lot").value.trim(), n = bulkRows().filter(r=>r.entry && r.on).length;
   $("#lotInfo").textContent = t==="" ? "Leave empty to use Paid per card." : n ? `${fmtCur(Number(t)/n, curCode())} per card · split across ${n} card${n===1?"":"s"} (Paid per card is ignored)` : "Type the cards above to see the price per card.";
