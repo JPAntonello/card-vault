@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795025199";
+const BUILD = "1795033736";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4217,8 +4217,8 @@ function openSetPage(id){
 
 /* ---------- Sets page ---------- */
 var sp = {scope:"mine", sport:"", year:"", q:"", brand:"", sort:"recent", page:1};
-try{ sp = {...sp, ...JSON.parse(LS.get("cv-setspage")||"{}"), q:"", page:1}; }catch{}
-const saveSp = () => LS.set("cv-setspage", JSON.stringify({...sp, q:""}));
+try{ sp = {...sp, ...JSON.parse(LS.get("cv-setspage")||"{}"), q:"", page:1, scope:"mine"}; }catch{}   // always opens on your own sets; Whole library is one tap away
+const saveSp = () => LS.set("cv-setspage", JSON.stringify({...sp, q:"", scope:"mine"}));
 const PER_PAGE = 12;
 var spLoading = false;
 function renderSetsPage(){
@@ -4647,7 +4647,7 @@ function goalClick(e){
     if(goalDel!==id){ goalDel = id; renderView(); setTimeout(()=>{ if(goalDel===id){ goalDel = ""; if(view==="goals" || view==="home") renderView(); } }, 4000); return true; }
     goalDel = ""; saveGoals(list=>list.filter(g=>g.id!==id)).then(()=>toast("Goal removed")).catch(err=>toast("Couldn't remove it: " + (err?.message||err))); return true; }
   const g = goals.find(x=>x.id===t.dataset.gset2); if(!g) return true;
-  if(g.setId==="*"){ setView("sets"); sp.scope = "all"; saveSp(); renderSetsPage(); $("#spDeep").value = deepQ = g.q; deepN = 60; renderDeep(); return true; }
+  if(g.setId==="*"){ setView("sets"); sp.scope = "all"; renderSetsPage(); $("#spDeep").value = deepQ = g.q; deepN = 60; renderDeep(); return true; }
   openSetPage(g.setId); filt.sub = g.par ? "par:" + g.par : g.sub || ""; filt.cl = "missing"; filt.team = g.team || ""; filt.player = g.player || ""; filt.flags = [...(g.flags||[])]; saveFilt(); render(); return true;
 }
 $("#clGoal").onclick = ()=>{ const a = activeSet(); if(!a) return;
