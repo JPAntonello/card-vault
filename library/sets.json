@@ -1252,5 +1252,16 @@
     "count": 139,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/463689/2024-25-Topps-The-Lost-Rookies",
     "note": "TCDB: 2024 25 Topps The Lost Rookies · 5 subsets · 6 parallels"
+  },
+  {
+    "id": "mvtplf2627",
+    "year": "2026/27",
+    "name": "Topps Premier League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-23T23:54:51.000Z",
+    "count": 1163,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/669125/2026-27-Topps-Flagship-Premier-League",
+    "note": "TCDB: 2026 27 Topps Flagship Premier League · 43 subsets · 371 parallels"
   }
 ]
