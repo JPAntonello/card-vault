@@ -69,7 +69,7 @@ async function putDoc(name, body, check){
 /* ---------- the set library: this site's library/sets.json + changes saved in Supabase ---------- */
 let repoSets = null, libCache = null;
 async function repoSetList(){
-  if(!repoSets){ try{ const r = await origFetch("library/sets.json?v=" + BUILD); repoSets = r.ok ? await r.json() : []; }catch{ repoSets = []; } }
+  if(!repoSets){ try{ const r = await origFetch("library/sets.json?v=" + BUILD, {cache:"no-cache"}); repoSets = r.ok ? await r.json() : []; }catch{ repoSets = []; } }
   return Array.isArray(repoSets) ? repoSets : [];
 }
 async function libRow(){
@@ -178,7 +178,7 @@ async function api(url, method, rawBody){
   }
   if((m = p.match(/^\/api\/catalog\/([A-Za-z0-9_-]{1,64})$/))){
     const id = m[1];
-    if(method === "GET"){ const r = await origFetch("library/catalog/" + id + ".json?v=" + BUILD); return r.ok ? J(await r.json()) : T("Not found", 404); }
+    if(method === "GET"){ const r = await origFetch("library/catalog/" + id + ".json?v=" + BUILD, {cache:"no-cache"}); return r.ok ? J(await r.json()) : T("Not found", 404); }
     if(method === "DELETE"){
       const snaps = await allSnapshots(), users = [];
       for(const k in snaps){ if(k === uid) continue; const b = snaps[k].body || {}; if((b.cards||[]).some(c => c.setId === id)) users.push(b.name || "a friend"); }
