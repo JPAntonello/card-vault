@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795439201";
+const BUILD = "1795479559";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1533,6 +1533,9 @@ async function loadCatalog(id){
   const data = await r.json();
   data.byNum = new Map();
   for(const c of data.cards||[]){ const k = normNum(c.n); if(!data.byNum.has(k)) data.byNum.set(k, []); data.byNum.get(k).push(c); }
+  // a player whose base card is a rookie card (RC) is a rookie on every card of his in the set, even where TCDB doesn't say so
+  const rcPl = new Set((data.cards||[]).filter(c=>c.rc && /^base$/i.test(c.sub||"Base")).map(c=>norm(c.player).trim()));
+  if(rcPl.size) for(const c of data.cards) if(!c.rc && rcPl.has(norm(c.player).trim())) c.rc = true;
   // parallels: each is its own TCDB checklist (Static Foil, Gold /1 …) of an insert ("parent")
   data.parallels = data.parallels || []; globalVers = null;
   // order versions from most common to rarest: unnumbered first (Common, Uncommon, then the rest as listed),
@@ -3919,7 +3922,11 @@ const SALE_PIC_IDS = new Set(["mvh05hpnczh8om2", "mvh05hpn3y33oh8", "mvh05hpn5h2
 const RC_FIXED = ["mvdonwwc2023","mvchr2021ucl","mvuwcl2223","mvuwcl2425","mvsccucl2526","mvchrmls26"];
 async function syncRookies(){
   if(viewing) return;
-  const ids = RC_FIXED.filter(id=>myCards.some(c=>c.setId===id && !c.rookie)); if(!ids.length) return;
+  // once: every set you have cards in (rookies now carry over from the base card); after that only the fixed list
+  const all = !LS.get("cv-rcprop1");
+  const ids = (all ? [...new Set(myCards.map(c=>c.setId).filter(Boolean))] : RC_FIXED).filter(id=>myCards.some(c=>c.setId===id && !c.rookie));
+  if(all) LS.set("cv-rcprop1", "1");
+  if(!ids.length) return;
   const fix = new Set();
   for(const id of ids){ const cat = catalogs[id] || await loadCatalog(id).catch(()=>null); if(!cat) continue;
     for(const c of myCards) if(c.setId===id && !c.rookie){ const e = editEntry(cat, c); if(e && e.rc) fix.add(c.id); } }
