@@ -442,6 +442,17 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 .goal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .goal .gTop{display:flex;gap:8px;align-items:baseline}.goal .gTop b{flex:1;min-width:0}
 .goal .gNum{font-variant-numeric:tabular-nums;font-weight:700}.goal .gDone{color:var(--ok);font-weight:700}
+.goal.gSel{outline:2px solid var(--label);outline-offset:-2px}.goal .gChk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.gGroupBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.gGroupBar input[type=text]{flex:1;min-width:160px}
+.goal li .gX{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px}
+.slab.ghost .gAdd{position:absolute;top:6px;left:38px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:.85rem;line-height:1;color:var(--muted);background:var(--surface);border:1px solid var(--line);z-index:2}
+.slab.ghost .gAdd.on{background:var(--label);border-color:var(--label)}
+.slab.ghost .tag{padding-left:70px}
+.dgG{border:0;background:none;cursor:pointer;font-size:.85rem;padding:0 4px;opacity:.55}.dgG.on,.dgG:hover{opacity:1}
+#gAddDlg{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:16px;max-width:360px;width:calc(100% - 32px)}
+#gAddDlg h3{margin:0 0 4px;font-size:1rem}#gAddDlg .opts{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+#gAddDlg .opts button{text-align:left}#gAddDlg .row{display:flex;gap:6px}#gAddDlg .row input{flex:1;min-width:0}
 .goal small{color:var(--muted)}.goal .gActs{display:flex;flex-wrap:wrap;gap:6px}.goal .gActs .chip{font-size:12px;padding:3px 10px}
 .goal ul{list-style:none;margin:2px 0 0;padding:0;max-height:320px;overflow:auto}
 .goal li{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
@@ -1387,7 +1398,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795490385";
+const BUILD = "1795524453";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1867,6 +1878,7 @@ function ghostTile(e, i, p){
   const kind = (e.sub && e.sub!=="Base" ? e.sub : "Base") + (p ? " · " + parLabel(p) : "");
   return `<button type="button" class="slab ghost${picked.has(i+"|"+(p?p.sid:""))?" picked":""}" data-missing="${i}"${p?` data-par="${esc(p.sid)}"`:""} aria-label="Missing: #${esc(e.n)} ${esc(e.player)} ${esc(kind)}. Add this card">
       <span class="want${wanted?" on":""}" data-want="${esc(wk)}" title="${wanted?"Remove from":"Add to"} want list">${wanted?"★":"☆"}</span>
+      ${viewing||!activeSet()?"":(()=>{ const k = goalKey(activeSet(), e, p||null), on = inGroups(k).length; return `<span class="gAdd${on?" on":""}" data-gadd="${esc(k)}" data-glabel="${esc(yearLabel(activeSet().year)+" "+activeSet().name+" · #"+e.n+" "+e.player+(p?" · "+parLabel(p):""))}" title="${on?"In your goal group (tap to change)":"Add this one card to a goal group"}">🎯</span>`; })()}
       <div class="tag"><span>${esc(kind)}</span><span class="num">#${esc(e.n)}</span></div>
       ${(()=>{ const pic = checklistPic(activeSet(), e, p); return pic ? `<div class="photo gp"><img src="${esc(pic)}" alt="" loading="lazy" decoding="async"><span class="miss">Missing</span></div>` : `<div class="photo">Missing<br>tap to add</div>`; })()}
       <div class="info">
@@ -2654,6 +2666,7 @@ $("#grid").onclick=e=>{
   if(viewing){ const s = e.target.closest(".slab[data-id]"); if(s) openCardPage(cards.find(c=>c.id===s.dataset.id)); return; }
   const w = e.target.closest("[data-want]");
   if(w){ e.stopPropagation(); toggleWant(w.dataset.want); return; }
+  const ga = e.target.closest("[data-gadd]"); if(ga){ e.stopPropagation(); openGoalAdd(ga.dataset.gadd, ga.dataset.glabel); return; }
   const b=e.target.closest(".slab"); if(!b) return;
   if(b.dataset.missing!==undefined){
     const a=activeSet(), cat=a&&catalogs[a.id]; if(!cat) return;
@@ -4328,11 +4341,12 @@ async function renderDeep(){
       groups.slice(goalPick ? 0 : 0, goalPick ? groups.length : deepN).map(g=>`<section class="dg${goalPick && !g.rows[0].par && !goalPickOn(g) ? " off" : ""}">${viewing?"":goalPick ? (g.rows[0].par ? `<span class="dgPick" style="font-weight:400;color:var(--muted)">parallel: make it its own goal</span>` : `<label class="dgPick"><input type="checkbox" data-gpk="${esc(g.s.id+"|"+g.sub)}"${goalPickOn(g)?" checked":""}> In goal</label>`) : `<button type="button" class="chip dgGoal" data-gset="${esc(g.s.id)}" data-gsub="${esc(g.rows[0].par ? "" : g.sub)}" data-gpar="${esc(g.rows[0].par ? g.rows[0].par.sid : "")}" data-gq="${esc(g.rows.length < goalBase(g.s.id, g.rows[0].par ? "" : g.sub, g.rows[0].par ? g.rows[0].par.sid : "") ? deepQ.trim() : "")}" title="Track just this checklist on Goals">🎯 Goal</button>`}
         <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
           <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
-        <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span><span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
+        <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span>${viewing?"":(()=>{ const k = goalKey(g.s, r.e, r.par||null), on = inGroups(k).length; return `<button type="button" class="dgG${on?" on":""}" data-gadd="${esc(k)}" data-glabel="${esc(yearLabel(g.s.year)+" "+g.s.name+" · #"+r.e.n+" "+r.e.player+(r.par?" · "+parLabel(r.par):""))}" title="${on?"In your goal group":"Add this one card to a goal group"}" aria-label="Add #${esc(r.e.n)} ${esc(r.e.player)} to a goal">🎯</button>`; })()}<span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
       (groups.length>deepN ? `<p class="hint">Showing ${deepN} of ${groups.length} checklists. <button type="button" class="btn ghost" id="deepMore">Show ${Math.min(60, groups.length-deepN)} more</button> or add a word to narrow it.</p>` : "");
 }
 $("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; deepN = 60; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
 $("#spDeepRes").addEventListener("click", e=>{ if(e.target.id==="deepMore"){ deepN += 60; renderDeep(); return; }
+  { const ga = e.target.closest("[data-gadd]"); if(ga){ e.stopPropagation(); openGoalAdd(ga.dataset.gadd, ga.dataset.glabel); return; } }
   if(e.target.id==="deepGoal"){ goalPick = {q: deepQ.trim(), skip: new Set(), noAuto: true, editId: ""}; renderDeep(); return; }
   if(goalPick){
     const k = e.target.closest("[data-gpk]");
@@ -4523,7 +4537,12 @@ const goalWords = q => norm(q||"").split(/\s+/).filter(Boolean);
 function goalBase(setId, sub, par){ const cat = catalogs[setId]; if(!cat) return 0;
   if(par){ const p = cat.parBySid.get(String(par)); return p ? p.cards.length : 0; }
   return cat.cards.filter(e=>!sub || (e.sub||"Base")===sub).length; }
+// a group goal: your own list ("Ex-Grêmio players") of whole goals (parts) and single cards (keys set|number|player|parallel)
+const isGroup = g => g && g.setId==="group";
+const groupsOf = () => goals.filter(isGroup);
+const goalSetIds = g => isGroup(g) ? [...new Set([...(g.parts||[]).flatMap(goalSetIds), ...(g.cards||[]).map(k=>k.split("|")[0])])] : g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId];
 function goalName(g){
+  if(isGroup(g)) return g.name || "My group";
   if(g.setId==="*") return `“${g.q}” cards · every set${g.noAuto?" · no autographs / relics":""}${(g.skip||[]).length?` · ${g.skip.length} checklist${g.skip.length===1?"":"s"} left out`:""}`;
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId], p = g.par && cat && cat.parBySid.get(String(g.par));
   return [s ? `${yearLabel(s.year)} ${s.name}` : "Set", p ? `${p.parent} · ${parLabel(p)}` : g.sub || "", g.team || "", g.player || "", (g.flags||[]).includes("rookie") ? "rookies" : "", (g.flags||[]).includes("auto") ? "autographs" : "", g.q ? `“${g.q}”` : ""].filter(Boolean).join(" · ");
@@ -4574,6 +4593,19 @@ function goalSearch(site){
 }
 // every card of a goal, whether you have it, a price to expect and which friend has a spare
 function goalRows(g){
+  if(isGroup(g)){
+    const rows = [], seen = new Set(); let loading = false;
+    const add = x => { const k = goalKey(x.s, x.e, x.p); if(seen.has(k)) return; seen.add(k); rows.push({...x, gk: k}); };
+    for(const part of g.parts||[]){ const r = goalRows(part); if(r) r.rows.forEach(add); else loading = true; }
+    for(const k of g.cards||[]){ const [sid, n, pl, ps] = k.split("|"), s = sets.find(x=>x.id===sid), cat = catalogs[sid];
+      if(!s || !cat){ if(s) loading = true; continue; }
+      const e = (cat.byNum.get(normNum(n))||[]).find(x=>pnk(x.player)===pnk(pl)) || (cat.byNum.get(normNum(n))||[])[0]; if(!e) continue;
+      const p = ps ? cat.parBySid.get(String(ps)) : null; if(ps && !p) continue;
+      const mine = myCards.filter(c=>!c.gone && sameCard(c, s, e, p));
+      add({e, p, s, cat, have: mine.reduce((t,c)=>t+(Number(c.qty)||1),0), mine, single: k}); }
+    if(!rows.length && loading) return null;
+    return {s:null, cat:null, rows, sets: new Set(rows.map(x=>x.s.id)).size};
+  }
   if(g.setId==="*"){   // one search across every set in the library ("golazo"): each set's matching base / insert cards
     const all = sets.filter(x=>x.status==="ready" && catalogs[x.id]), rows = [];
     if(!all.length) return null;
@@ -4616,37 +4648,107 @@ function goalSpares(s, e, p){
   return friends.filter(f=>(f.cards||[]).filter(c=>!c.gone && sameCard(c, s, e, p)).reduce((n,c)=>n+(Number(c.qty)||1),0) >= 2).map(f=>f.name);
 }
 function renderGoalsPage(){
-  $("#vGoals").innerHTML = viewing ? `<p class="hint">Goals are your own: switch back to your collection to see them.</p>` : `<div class="pagehead"><div><h2>Goals</h2><p class="sub">Add one from a set (<b>🎯 Make this a goal</b>; pick an insert or parallel first to track just that) or from a search on <b>Sets</b> (e.g. “golazo” → <b>🎯 Make a goal from this search…</b>, then tick the checklists you want).</p></div></div>` + goalsHTML();
+  $("#vGoals").innerHTML = viewing ? `<p class="hint">Goals are your own: switch back to your collection to see them.</p>` : `<div class="pagehead"><div><h2>Goals</h2><p class="sub">Add one from a set (<b>🎯 Make this a goal</b>; pick an insert or parallel first to track just that), from a search on <b>Sets</b> (e.g. “golazo” → <b>🎯 Make a goal from this search…</b>), or one card at a time: tap <b>🎯</b> on a missing card in a checklist or in a Sets search to put it in a goal group.</p></div></div>` + goalsHTML();
 }
 $("#vGoals").addEventListener("click", e=>{ if(goalClick(e)) return;
   const sl = e.target.closest("[data-gcard]"); if(sl){ const c = myCards.find(x=>x.id===sl.dataset.gcard); if(c) openCardPage(c); } });
 function goalsHTML(){
-  const need = [...new Set(goals.flatMap(g=>g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId]))].filter(id=>!catalogs[id] && !goalCatTried.has(id) && sets.some(s=>s.id===id && s.status==="ready"));
+  const need = [...new Set(goals.flatMap(goalSetIds))].filter(id=>!catalogs[id] && !goalCatTried.has(id) && sets.some(s=>s.id===id && s.status==="ready"));
   if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; need.forEach(id=>goalCatTried.add(id)); Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="goals" || view==="home") renderView(); }); }
   if(!goals.length) return `<p class="hint"><b>No goals yet.</b></p>`;
+  const bar = goalGroupSel ? `<div class="gGroupBar"><b>Group goals:</b> tick the goals to put together${groupsOf().length?" (tick a group to add them to it)":""}
+      <input type="text" id="gGroupName" placeholder="Group name, e.g. Ex-Grêmio players" value="${esc(goalGroupSel.name||"")}" aria-label="Group name">
+      <button type="button" class="btn" id="gGroupSave"${goalGroupSel.ids.size>=1?"":" disabled"}>Group ${goalGroupSel.ids.size} goal${goalGroupSel.ids.size===1?"":"s"}</button><button type="button" class="chip" id="gGroupCancel">Cancel</button></div>`
+    : `<div class="gGroupBar"><span>Put several goals into one (e.g. every ex-Grêmio player), or start an empty group and add single cards to it with 🎯 on a checklist.</span><button type="button" class="chip" id="gGroupStart">Group goals…</button><button type="button" class="chip" id="gGroupNew">New empty group</button></div>`;
   const tiles = goals.map(g=>{
+    const multi = g.setId==="*" || isGroup(g), sel = goalGroupSel && goalGroupSel.ids.has(g.id);
+    const chk = goalGroupSel ? `<label class="gChk"><input type="checkbox" data-gsel="${esc(g.id)}"${sel?" checked":""}> ${isGroup(g)?"Add to this group":"Put in the group"}</label>` : "";
     const r = goalRows(g);
-    if(!r) return `<div class="goal"><div class="gTop"><b>${esc(g.name)}</b></div><small>${need.length?"Loading checklists…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
+    if(!r) return `<div class="goal${sel?" gSel":""}">${chk}<div class="gTop"><b>${esc(goalName(g))}</b></div><small>${need.length?"Loading checklists…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
     const have = r.rows.filter(x=>x.have).length, total = r.rows.length, miss = r.rows.filter(x=>!x.have);
     const priced = miss.map(x=>({...x, price: goalPrice(x.s, x.cat, x.e, x.p), spare: goalSpares(x.s, x.e, x.p)}));
     const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), est = known.some(x=>x.price.est);
     priced.sort((a,b)=>(a.price?a.price.v:1e9)-(b.price?b.price.v:1e9) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
     const spares = priced.filter(x=>x.spare.length).length, open = goalOpen.get(g.id) || "";
     const got = r.rows.filter(x=>x.have).sort((a,b)=>String(a.s.year).localeCompare(String(b.s.year)) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
-    return `<div class="goal">
-      <div class="gTop"><b>${esc(g.name)}</b><span class="gNum">${have}/${total}</span></div>${g.setId==="*"?`<small>${r.sets} set${r.sets===1?"":"s"} in the library · new sets count automatically</small>`:""}
+    return `<div class="goal${sel?" gSel":""}">${chk}
+      <div class="gTop"><b>${isGroup(g)?"📁 ":""}${esc(goalName(g))}</b><span class="gNum">${have}/${total}</span></div>${g.setId==="*"?`<small>${r.sets} set${r.sets===1?"":"s"} in the library · new sets count automatically</small>`:""}${isGroup(g)?`<small>${r.sets} set${r.sets===1?"":"s"} · ${(g.parts||[]).length} goal${(g.parts||[]).length===1?"":"s"} + ${(g.cards||[]).length} single card${(g.cards||[]).length===1?"":"s"} · add more with 🎯 on any checklist</small>`:""}
       <div class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></div>
       ${have>=total && total ? `<span class="gDone">Complete! 🎉</span>` : `<small>${pctTxt(have,total)} · missing ${miss.length}${known.length?` · ${est||known.length<miss.length?"≈ ":""}${money(cost, true)} to finish${known.length<miss.length?` (${miss.length-known.length} without a price)`:""}`:""}${spares?` · friends have ${spares} spare${spares===1?"":"s"}`:""}</small>`}
-      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${open==="miss"}">Missing ${miss.length}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${open==="have"}">I have ${have}</button>`:""}<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
+      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${open==="miss"}">Missing ${miss.length}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${open==="have"}">I have ${have}</button>`:""}${isGroup(g)?`<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
       ${open==="have" ? `<div class="gHave">${got.slice(0,300).map(x=>{ const c = x.mine[0]; const img = c && cardImg(c);
-          return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${g.setId==="*"?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
-      ${open==="miss" ? `<ul>${priced.slice(0,200).map(x=>`<li>${(()=>{ const pic = (goalPrices[goalKey(x.s, x.e, x.p)]||{}).pic; return pic ? `<img class="gPic" src="${esc(pic.replace(/\/1600\.jpg$/, "/240.jpg").replace(/s-l1600(\.\w+)$/, "s-l225$1"))}" alt="" loading="lazy">` : `<span class="gPic"></span>`; })()}<span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${g.setId==="*"?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span></li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
+          return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${multi?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}${x.p?" · "+esc(parLabel(x.p)):""}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
+      ${open==="miss" ? `<ul>${priced.slice(0,200).map(x=>`<li>${(()=>{ const pic = (goalPrices[goalKey(x.s, x.e, x.p)]||{}).pic; return pic ? `<img class="gPic" src="${esc(pic.replace(/\/1600\.jpg$/, "/240.jpg").replace(/s-l1600(\.\w+)$/, "s-l225$1"))}" alt="" loading="lazy">` : `<span class="gPic"></span>`; })()}<span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${multi?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}${x.p?" · "+esc(parLabel(x.p)):""}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span>${x.single && isGroup(g)?`<button type="button" class="gX" data-gunpin="${esc(g.id)}" data-gk="${esc(x.single)}" title="Take this card out of the group" aria-label="Take #${esc(x.e.n)} ${esc(x.e.player)} out of the group">✕</button>`:""}</li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
     </div>`;
   }).join("");
-  return `<div class="goals">${tiles}</div>`;
+  return bar + `<div class="goals">${tiles}</div>`;
 }
+let goalGroupSel = null;   // grouping goals on the Goals page: {ids:Set, name}
+// put goals together: plain goals become parts of the group; a ticked group takes them in (and other groups' contents)
+async function groupGoals(ids, name){
+  const pick = goals.filter(g=>ids.has(g.id)); if(!pick.length) return;
+  const target = pick.find(isGroup);
+  const parts = pick.filter(g=>g!==target).flatMap(g=>isGroup(g) ? (g.parts||[]) : [(({id, name, made, ...rest})=>rest)(g)]);
+  const singles = pick.filter(g=>g!==target && isGroup(g)).flatMap(g=>g.cards||[]);
+  const gid = target ? target.id : "gg" + Date.now().toString(36), drop = new Set(pick.filter(g=>g!==target).map(g=>g.id));
+  await saveGoals(list=>{
+    let out = list.filter(g=>!drop.has(g.id));
+    const cur = out.find(g=>g.id===gid);
+    const grp = {...(cur || {id: gid, setId: "group", made: isoDay(), parts: [], cards: []})};
+    grp.name = name || grp.name || "My group"; grp.parts = [...(grp.parts||[]), ...parts]; grp.cards = [...new Set([...(grp.cards||[]), ...singles])];
+    return cur ? out.map(g=>g.id===gid ? grp : g) : [...out, grp];
+  });
+  toast(`📁 ${name || (target && target.name) || "Group"}: ${pick.length} goal${pick.length===1?"":"s"} together`);
+}
+// one card into a group goal (from 🎯 on a checklist)
+async function addCardToGroup(gid, key, newName){
+  const id = gid || "gg" + Date.now().toString(36);
+  await saveGoals(list=>{
+    const cur = list.find(g=>g.id===id);
+    if(cur){ const has = (cur.cards||[]).includes(key); return list.map(g=>g.id===id ? {...g, cards: has ? g.cards.filter(k=>k!==key) : [...(g.cards||[]), key]} : g); }
+    return [...list, {id, setId: "group", name: newName || "My group", made: isoDay(), parts: [], cards: [key]}];
+  });
+}
+const inGroups = key => groupsOf().filter(g=>(g.cards||[]).includes(key));
+function openGoalAdd(key, label){
+  let d = $("#gAddDlg"); if(!d){ d = document.createElement("dialog"); d.id = "gAddDlg"; document.body.appendChild(d); }
+  const gs = groupsOf();
+  d.innerHTML = `<h3>🎯 Add to a goal</h3><small style="color:var(--muted)">${esc(label)}</small>
+    <div class="opts">${gs.map(g=>{ const on = (g.cards||[]).includes(key); return `<button type="button" class="chip" data-gto="${esc(g.id)}" aria-pressed="${on}">${on?"✓ ":""}📁 ${esc(g.name)}${on?" (tap to take it out)":""}</button>`; }).join("") || `<small style="color:var(--muted)">No groups yet: name one below.</small>`}</div>
+    <div class="row"><input type="text" id="gAddName" placeholder="New group, e.g. Ex-Grêmio players" aria-label="New group name"><button type="button" class="btn" id="gAddNew">Create</button></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost" id="gAddClose">Close</button></div>`;
+  d.onclick = async ev => {
+    const t = ev.target;
+    if(t.id==="gAddClose" || t===d){ d.close(); return; }
+    const to = t.closest("[data-gto]"), nw = t.id==="gAddNew";
+    if(!to && !nw) return;
+    const name = nw ? $("#gAddName").value.trim() : ""; if(nw && !name){ $("#gAddName").focus(); return; }
+    try{ const g = to && goals.find(x=>x.id===to.dataset.gto), was = g && (g.cards||[]).includes(key);
+      await addCardToGroup(to ? to.dataset.gto : "", key, name); d.close();
+      toast(was ? `Taken out of ${g.name}` : `🎯 Added to ${g ? g.name : name}`); if(typeof render==="function" && view==="sets") renderDeep(); render(); }
+    catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); }
+  };
+  d.showModal();
+}
+$("#vGoals").addEventListener("change", e=>{ const c = e.target.closest("[data-gsel]"); if(!c || !goalGroupSel) return;
+  c.checked ? goalGroupSel.ids.add(c.dataset.gsel) : goalGroupSel.ids.delete(c.dataset.gsel); goalGroupSel.name = ($("#gGroupName")||{}).value || goalGroupSel.name; renderView(); });
+$("#vGoals").addEventListener("input", e=>{ if(e.target.id==="gGroupName" && goalGroupSel) goalGroupSel.name = e.target.value; });
 function goalClick(e){
-  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2],[data-gedit]"); if(!t) return false;
+  const id0 = e.target.id;
+  if(id0==="gGroupStart"){ goalGroupSel = {ids: new Set(), name: ""}; renderView(); return true; }
+  if(id0==="gGroupCancel"){ goalGroupSel = null; renderView(); return true; }
+  if(id0==="gGroupNew"){ const name = (prompt("Name of the new group (e.g. Ex-Grêmio players)")||"").trim(); if(name) saveGoals(list=>[...list, {id: "gg"+Date.now().toString(36), setId:"group", name, made: isoDay(), parts: [], cards: []}]).then(()=>toast(`📁 ${name} created · add cards with 🎯 on any checklist`)).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
+  if(id0==="gGroupSave" && goalGroupSel){ const sel = goalGroupSel, name = ($("#gGroupName").value||"").trim();
+    if(!name && ![...sel.ids].some(i=>isGroup(goals.find(g=>g.id===i)))){ $("#gGroupName").focus(); toast("Give the group a name"); return true; }
+    goalGroupSel = null; groupGoals(sel.ids, name).catch(err=>toast("Couldn't group them: " + (err?.message||err))); return true; }
+  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2],[data-gedit],[data-grename],[data-gungroup],[data-gunpin]"); if(!t) return false;
+  if(t.dataset.gunpin){ const gid = t.dataset.gunpin, k = t.dataset.gk; saveGoals(list=>list.map(g=>g.id===gid ? {...g, cards: (g.cards||[]).filter(x=>x!==k)} : g)).then(()=>toast("Taken out of the group")).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
+  if(t.dataset.grename){ const g = goals.find(x=>x.id===t.dataset.grename); if(!g) return true; const name = (prompt("Group name", g.name)||"").trim();
+    if(name && name!==g.name) saveGoals(list=>list.map(x=>x.id===g.id ? {...x, name} : x)).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
+  if(t.dataset.gungroup){ const g = goals.find(x=>x.id===t.dataset.gungroup); if(!g) return true;
+    // its goals go back on their own; single cards stay in the (now smaller) group
+    saveGoals(list=>{ const back = (g.parts||[]).map((p,i)=>{ const x = {...p, id: "g"+Date.now().toString(36)+i, made: isoDay()}; x.name = goalName(x); return x; });
+      const rest = list.flatMap(x=>x.id!==g.id ? [x] : (g.cards||[]).length ? [{...x, parts: []}] : []); return [...rest, ...back]; }).then(()=>toast("Ungrouped")).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
   if(t.dataset.gedit){ const g = goals.find(x=>x.id===t.dataset.gedit); if(!g) return true;
     setView("sets"); $("#spDeep").value = deepQ = g.q; goalPick = {q:g.q, skip:new Set(g.skip||[]), noAuto:!!g.noAuto, editId:g.id}; renderSetsPage(); renderDeep(); return true; }
   if(t.dataset.gopen){ const id = t.dataset.gopen, tab = t.dataset.gtab; goalOpen.get(id)===tab ? goalOpen.delete(id) : goalOpen.set(id, tab); renderView(); return true; }
