@@ -1387,7 +1387,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795479559";
+const BUILD = "1795490385";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -2948,7 +2948,7 @@ function cardMatch(title, c, strict){
       for(const w of (catalogs[c.setId]||{})._words||[]) if(!ownW.includes(" "+w+" ") && t.includes(" "+w+" ")) return NO(`another version: "${w}"`, w);
       // versions named in any of your checklists ("Heat Vision", "Spectrum"…) and words you marked "not my card" for this set
       const pz = s => s.replace(/\bprizms\b/g,"prizm").replace(/\brefractors\b/g,"refractor"), ownG = pz(ownW + ` ${nrm(c.set)} ${nrm(c.year)} `), tG = pz(t);
-      for(const ph of globalPhrases()) if(!ownG.includes(" "+ph+" ") && tG.includes(" "+ph+" ")) return NO(`another version: "${ph}"`, ph);
+      for(const ph of globalPhrases()) if(!ownG.includes(" "+ph+" ") && !ownG.includes(" "+ph.replace(/ prizm$/,"")+" ") && tG.includes(" "+ph+" ")) return NO(`another version: "${ph}"`, ph);   // "Mosaic Prizm" is how sellers name the Mosaic version
       for(const ph of blockedFor(c)) if(t.includes(" "+ph+" ")) return NO(`you marked "${ph}" as not your card`); }
     // rare versions sellers name (SSP, Plum Blossom, Diamond…): only when this card is that version
     { const mine = ` ${nrm(c.variant)} ${nrm(c.parallel)} ${nrm(ownSub(c))} ${ownTags(c)} ${AL} ${/variation/i.test(ownSub(c)) ? "sp ssp short print var variation" : ""} ${c.serial || c.auto ? "sp" : ""} ${set} ${nrm(c.team)} ${/\battax\b/.test(set) ? "diamond" : ""} `;   // Turbo/Match Attax: "Diamond" cards are base cards
