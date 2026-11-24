@@ -1318,5 +1318,16 @@
     "count": 738,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/596758/2025-26-Panini-Select-La-Liga",
     "note": "TCDB: 2025 26 Panini Select La Liga · 20 subsets · 137 parallels"
+  },
+  {
+    "id": "mvprizmpl2425",
+    "year": "2024/25",
+    "name": "Panini Prizm Premier League",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-24T04:49:28.000Z",
+    "count": 692,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/481484/2024-25-Panini-Prizm-Premier-League",
+    "note": "TCDB: 2024 25 Panini Prizm Premier League · 17 subsets · 169 parallels"
   }
 ]
