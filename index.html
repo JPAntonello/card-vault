@@ -475,6 +475,7 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 .gC .pr{display:flex;justify-content:space-between;gap:4px;align-items:center}.gC .pr a{color:inherit}
 .gC .gRm{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:13px;line-height:1;padding:0}
 .gC .gRm:hover{color:var(--danger,#d33);border-color:currentColor}
+.gC .gVia{color:var(--ok);font-weight:600}
 .goal small{color:var(--muted)}.goal .gActs{display:flex;flex-wrap:wrap;gap:6px}.goal .gActs .chip{font-size:12px;padding:3px 10px}
 .goal ul{list-style:none;margin:2px 0 0;padding:0;max-height:320px;overflow:auto}
 .goal li{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
@@ -1420,7 +1421,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795525230";
+const BUILD = "1795525710";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -1698,7 +1699,23 @@ function clearFilters(){ if(goneView){ goneView = false; $("#fGone").value = "";
 const setKeyOf = s => [s.year, s.name].filter(Boolean).join(" ");
 const cardsOfSet = s => cards.filter(c => c.setId===s.id || (!c.setId && setKey(c)===setKeyOf(s)));
 // Link each owned card to its checklist entry (same number; if two share it, the best-matching insert/autograph)
-function ownership(s, cat){
+// a checklist card counts as yours when you have it or any colour version of it (a Refractor completes the base card);
+// exact = only the plain card. A list that came from a version carries .via (the version's name)
+function ownership(s, cat, exact){
+  const own = ownExact(s, cat); if(exact) return own;
+  for(const c of cardsOfSet(s)){
+    if(!c.parallelSid) continue;
+    const p = cat.parBySid && cat.parBySid.get(String(c.parallelSid)); if(!p) continue;
+    const e = parEntry(cat, p, c.number, c.player); if(!e) continue;
+    const i = cat.cards.indexOf(e); if(i<0) continue;
+    const cur = own.get(i);
+    if(cur && !cur.via) continue;   // you have the plain card: that's the one shown
+    if(!cur){ const a = []; a.via = parLabel(p); own.set(i, a); }
+    own.get(i).push(c);
+  }
+  return own;
+}
+function ownExact(s, cat){
   const own = new Map();
   for(const c of cardsOfSet(s)){
     if(c.parallelSid) continue;           // parallels are counted in their own checklist
@@ -4363,7 +4380,7 @@ async function renderDeep(){
       groups.slice(goalPick ? 0 : 0, goalPick ? groups.length : deepN).map(g=>`<section class="dg${goalPick && !g.rows[0].par && !goalPickOn(g) ? " off" : ""}">${viewing?"":goalPick ? (g.rows[0].par ? `<span class="dgPick" style="font-weight:400;color:var(--muted)">parallel: make it its own goal</span>` : `<label class="dgPick"><input type="checkbox" data-gpk="${esc(g.s.id+"|"+g.sub)}"${goalPickOn(g)?" checked":""}> In goal</label>`) : `<button type="button" class="chip dgGoal" data-gset="${esc(g.s.id)}" data-gsub="${esc(g.rows[0].par ? "" : g.sub)}" data-gpar="${esc(g.rows[0].par ? g.rows[0].par.sid : "")}" data-gq="${esc(g.rows.length < goalBase(g.s.id, g.rows[0].par ? "" : g.sub, g.rows[0].par ? g.rows[0].par.sid : "") ? deepQ.trim() : "")}" title="Track just this checklist on Goals">🎯 Goal</button>`}
         <button type="button" class="dgHead" data-dset="${esc(g.s.id)}" data-dsub="${esc(g.rows[0].par ? "" : g.sub)}" title="Open this checklist">
           <b>${esc(yearLabel(g.s.year))} ${esc(g.s.name)}</b><span>${esc(g.sub)}</span><em>${g.have} / ${g.rows.length}</em></button>
-        <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span>${viewing?"":(()=>{ const k = goalKey(g.s, r.e, r.par||null), on = inGroups(k).length; return `<button type="button" class="dgG${on?" on":""}" data-gadd="${esc(k)}" data-glabel="${esc(yearLabel(g.s.year)+" "+g.s.name+" · #"+r.e.n+" "+r.e.player+(r.par?" · "+parLabel(r.par):""))}" title="${on?"In your goal group":"Add this one card to a goal group"}" aria-label="Add #${esc(r.e.n)} ${esc(r.e.player)} to a goal">🎯</button>`; })()}<span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
+        <ul>${g.rows.slice(0, 80).map(r=>`<li class="${r.mine&&r.mine.length?"have":"miss"}"><span class="dgMark">${r.mine&&r.mine.length?"✓":"✗"}</span>${viewing?"":(()=>{ const k = goalKey(g.s, r.e, r.par||null), on = inGroups(k).length; return `<button type="button" class="dgG${on?" on":""}" data-gadd="${esc(k)}" data-glabel="${esc(yearLabel(g.s.year)+" "+g.s.name+" · #"+r.e.n+" "+r.e.player+(r.par?" · "+parLabel(r.par):""))}" title="${on?"In your goal group":"Add this one card to a goal group"}" aria-label="Add #${esc(r.e.n)} ${esc(r.e.player)} to a goal">🎯</button>`; })()}<span class="dgNum">#${esc(r.e.n)}</span><span class="dgPl">${esc(r.e.player)}${r.mine&&r.mine.via?` <small style="color:var(--ok)">✓ via ${esc(r.mine.via)}</small>`:""}</span><span class="dgTeam">${esc(r.e.team||"")}</span>${r.mine&&r.mine.length>1?`<small>×${r.mine.length}</small>`:""}</li>`).join("")}${g.rows.length>80?`<li class="more">+ ${g.rows.length-80} more</li>`:""}</ul></section>`).join("") +
       (groups.length>deepN ? `<p class="hint">Showing ${deepN} of ${groups.length} checklists. <button type="button" class="btn ghost" id="deepMore">Show ${Math.min(60, groups.length-deepN)} more</button> or add a word to narrow it.</p>` : "");
 }
 $("#spDeep").addEventListener("input", e=>{ deepQ = e.target.value; deepN = 60; clearTimeout(deepT); deepT = setTimeout(renderDeep, 300); });
@@ -4624,12 +4641,14 @@ function goalRows0(g){
   if(isGroup(g)){
     const rows = [], seen = new Set(); let loading = false;
     const add = x => { const k = goalKey(x.s, x.e, x.p); if(seen.has(k)) return; seen.add(k); rows.push({...x, gk: k}); };
-    for(const part of g.parts||[]){ const r = goalRows(part); if(r) r.rows.forEach(add); else loading = true; }
+    for(const part of g.parts||[]){ const r = goalRows(g.exact ? {...part, exact: true} : part); if(r) r.rows.forEach(add); else loading = true; }
     for(const k of g.cards||[]){ const [sid, n, pl, ps] = k.split("|"), s = sets.find(x=>x.id===sid), cat = catalogs[sid];
       if(!s || !cat){ if(s) loading = true; continue; }
       const e = (cat.byNum.get(normNum(n))||[]).find(x=>pnk(x.player)===pnk(pl)) || (cat.byNum.get(normNum(n))||[])[0]; if(!e) continue;
       const p = ps ? cat.parBySid.get(String(ps)) : null; if(ps && !p) continue;
-      const mine = myCards.filter(c=>!c.gone && sameCard(c, s, e, p));
+      let mine = myCards.filter(c=>!c.gone && sameCard(c, s, e, p));
+      if(!mine.length && !p && !g.exact){ const v = myCards.filter(c=>!c.gone && c.setId===s.id && c.parallelSid && (()=>{ const pp = cat.parBySid.get(String(c.parallelSid)); return pp && parEntry(cat, pp, c.number, c.player)===e; })());
+        if(v.length){ mine = v; mine.via = parLabel(cat.parBySid.get(String(v[0].parallelSid))); } }
       add({e, p, s, cat, have: mine.reduce((t,c)=>t+(Number(c.qty)||1),0), mine, single: k}); }
     if(!rows.length && loading) return null;
     return {s:null, cat:null, rows, sets: new Set(rows.map(x=>x.s.id)).size};
@@ -4652,7 +4671,7 @@ function goalRows0(g){
       && (!fl.includes("rookie") || e.rc) && (!fl.includes("auto") || (e.tags||[]).includes("AU"));
     if(g.par){ const p = cat.parBySid.get(String(g.par)); if(!p) return null; const own = parOwnership(s, p);
       rows = p.cards.map(([n,,pl])=>{ const e = parEntry(cat, p, n, pl); return e && hit(e) ? {e, p, s, cat, have: (own.get(pkey(n,pl))||[]).length, mine: own.get(pkey(n,pl))||[]} : null; }).filter(Boolean); }
-    else { const own = ownership(s, cat);
+    else { const own = ownership(s, cat, !!g.exact);
       rows = cat.cards.map((e,i)=>(!g.sub || (e.sub||"Base")===g.sub) && hit(e) ? {e, p:null, s, cat, have:(own.get(i)||[]).length, mine: own.get(i)||[]} : null).filter(Boolean); }
   } finally { cards = was; }
   return {s, cat, rows};
@@ -4725,13 +4744,13 @@ function goalDetail(g, r, priced){
     multi ? `${r.sets} set${r.sets===1?"":"s"}` : "", isGroup(g) ? `${(g.parts||[]).length} goal${(g.parts||[]).length===1?"":"s"} + ${(g.cards||[]).length} single card${(g.cards||[]).length===1?"":"s"}` : "",
     spares ? `friends have ${spares} spare${spares===1?"":"s"}` : ""].filter(Boolean).join(" · ");
   return `<div class="goal gOpen"><div class="gTop"><b>${isGroup(g)?"📁 ":""}${esc(goalName(g))}</b><span class="gNum">${have}/${total}</span></div><small>${info}</small>
-    <div class="gActs"><button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="all" aria-pressed="${tab==="all"}">All ${total}</button>${miss?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${tab==="miss"}">Missing ${miss}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${tab==="have"}">I have ${have}</button>`:""}<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${isGroup(g)?`${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button><button type="button" class="chip" data-gclose="1">Close</button></div>
+    <div class="gActs"><button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="all" aria-pressed="${tab==="all"}">All ${total}</button>${miss?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${tab==="miss"}">Missing ${miss}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${tab==="have"}">I have ${have}</button>`:""}${g.par?"":`<button type="button" class="chip" data-gexact="${esc(g.id)}" aria-pressed="${!!g.exact}" title="${g.exact?"Only the plain card counts (tap to let any colour version count)":"Any colour version counts as the card (tap to need the exact card)"}">${g.exact?"Exact version only":"Any version counts"}</button>`}<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${isGroup(g)?`${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button><button type="button" class="chip" data-gclose="1">Close</button></div>
     ${(()=>{ const list = tab==="have" ? got : tab==="all" ? [...got, ...priced] : priced; if(!list.length) return "";
       return `<div class="gGrid">${list.slice(0,400).map(x=>{ const k = goalKey(x.s, x.e, x.p), own = x.have && x.mine && x.mine[0], c = own ? x.mine.find(m=>cardImg(m)) || x.mine[0] : null;
         const pic = c && cardImg(c) ? cardThumb(c) : checklistPic(x.s, x.e, x.p), pr = x.price || (own ? null : goalPrice(x.s, x.cat, x.e, x.p)), sp = x.spare || [];
         return `<div class="gC${own?"":" miss"}"><button type="button" class="ph" ${own?`data-gcard="${esc(c.id)}"`:`data-gtoset="${esc(x.s.id)}" data-gpl="${esc(x.e.player)}"`} title="${own?"Open your card":"Open it in the set's checklist"}">${pic?`<img src="${esc(pic)}" alt="" loading="lazy" decoding="async">`:`#${esc(x.e.n)}`}</button>${own?"":`<span class="miss-l">Missing</span>`}
           <button type="button" class="gRm" data-grm="${esc(g.id)}" data-gk="${esc(k)}" title="Take this card out of the goal" aria-label="Take #${esc(x.e.n)} ${esc(x.e.player)} out of the goal">✕</button>
-          <b>#${esc(x.e.n)} ${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${x.have>1?` ×${x.have}`:""}</b><small>${multi?esc(yearLabel(x.s.year)+" "+x.s.name)+" · ":""}${esc(x.e.sub||"Base")}${x.p?" · "+esc(parLabel(x.p)):""}</small>
+          <b>#${esc(x.e.n)} ${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${x.have>1?` ×${x.have}`:""}</b>${own && x.mine.via?`<small class="gVia">✓ via ${esc(x.mine.via)}</small>`:""}<small>${multi?esc(yearLabel(x.s.year)+" "+x.s.name)+" · ":""}${esc(x.e.sub||"Base")}${x.p?" · "+esc(parLabel(x.p)):""}</small>
           ${own?"":`<span class="pr"><small>${sp.length?esc(sp.join(", "))+" has a spare":""}</small><span>${pr?(pr.url?`<a href="${esc(pr.url)}" target="_blank" rel="noopener">${money(pr.v)}</a>`:`${pr.est?"~":""}${money(pr.v)}`):"—"}</span></span>`}</div>`; }).join("")}</div>${list.length>400?`<small>+ ${list.length-400} more</small>`:""}`; })()}
     ${(g.exclude||[]).length?`<small>${g.exclude.length} card${g.exclude.length===1?"":"s"} taken out of this goal · <button type="button" class="chip" data-grestore="${esc(g.id)}">Put them back</button></small>`:""}
   </div>`;
@@ -4799,7 +4818,8 @@ function goalClick(e){
   if(id0==="gGroupSave" && goalGroupSel){ const sel = goalGroupSel, name = ($("#gGroupName").value||"").trim();
     if(!name && ![...sel.ids].some(i=>isGroup(goals.find(g=>g.id===i)))){ $("#gGroupName").focus(); toast("Give the group a name"); return true; }
     goalGroupSel = null; groupGoals(sel.ids, name).catch(err=>toast("Couldn't group them: " + (err?.message||err))); return true; }
-  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2],[data-gedit],[data-grename],[data-gungroup],[data-gunpin],[data-grm],[data-grestore],[data-gtoset]"); if(!t) return false;
+  const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2],[data-gedit],[data-grename],[data-gungroup],[data-gunpin],[data-grm],[data-grestore],[data-gtoset],[data-gexact]"); if(!t) return false;
+  if(t.dataset.gexact){ const gid = t.dataset.gexact; saveGoals(list=>list.map(g=>{ if(g.id!==gid) return g; const y = {...g}; if(y.exact) delete y.exact; else y.exact = true; return y; })).then(()=>toast(goals.find(g=>g.id===gid)?.exact ? "This goal now needs the exact card" : "Any colour version now counts for this goal")).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
   if(t.dataset.grm){ const gid = t.dataset.grm, k = t.dataset.gk;
     // a single card of a group leaves the group's list; any other card is left out of the goal
     saveGoals(list=>list.map(g=>{ if(g.id!==gid) return g; if(isGroup(g) && (g.cards||[]).includes(k)) return {...g, cards: g.cards.filter(x=>x!==k)};
