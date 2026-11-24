@@ -1410,7 +1410,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795524897";
+const BUILD = "1795524956";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4689,9 +4689,10 @@ function goalsHTML(){
     for(const x of miss){ if(cov.length>=8) break; const pic = checklistPic(x.s, x.e, x.p); if(pic) cov.push(`<i class="m"><img src="${esc(pic)}" alt="" loading="lazy" decoding="async"></i>`); }
     while(cov.length<8) cov.push(`<i></i>`);
     const done = have>=total && total, isOpen = openId===g.id;
-    parts.push(`<button type="button" class="gT${sel?" gSel":""}" data-gtile="${esc(g.id)}" aria-expanded="${isOpen}">${chk}<span class="cov" aria-hidden="true">${cov.join("")}</span><span class="b"><b>${esc(name)}</b>
+    const tag = goalGroupSel ? "label" : "button";   // while grouping, the whole tile ticks its box
+    parts.push(`<${tag}${goalGroupSel?"":` type="button"`} class="gT${sel?" gSel":""}"${goalGroupSel?"":` data-gtile="${esc(g.id)}" aria-expanded="${isOpen}"`}>${goalGroupSel?`<span class="gChk"><input type="checkbox" data-gsel="${esc(g.id)}"${sel?" checked":""}> ${isGroup(g)?"Add to this group":"Put in the group"}</span>`:""}<span class="cov" aria-hidden="true">${cov.join("")}</span><span class="b"><b>${esc(name)}</b>
       <span class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></span>
-      <span class="row"><span><strong>${have}/${total}</strong> cards</span><span>${done?`<span class="gDone">Complete 🎉</span>`:known.length?`${est?"≈ ":""}${money(cost, true)} to go`:`${miss.length} missing`}</span></span></span></button>`);
+      <span class="row"><span><strong>${have}/${total}</strong> cards</span><span>${done?`<span class="gDone">Complete 🎉</span>`:known.length?`${est?"≈ ":""}${money(cost, true)} to go`:`${miss.length} missing`}</span></span></span></${tag}>`);
     if(isOpen) parts.push(goalDetail(g, r, priced));
   }
   return bar + `<div class="gTiles">${parts.join("")}</div>`;
