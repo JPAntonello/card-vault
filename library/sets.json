@@ -1296,5 +1296,16 @@
     "count": 738,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/599897/2025-26-Panini-Select-Road-to-FIFA-World-Cup",
     "note": "TCDB: 2025 26 Panini Select Road to FIFA World Cup · 20 subsets · 168 parallels"
+  },
+  {
+    "id": "mvprizmfifa2526",
+    "year": "2025/26",
+    "name": "Panini Prizm FIFA",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-24T03:19:08.000Z",
+    "count": 665,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/579695/2025-26-Panini-Prizm-FIFA",
+    "note": "TCDB: 2025 26 Panini Prizm FIFA · 15 subsets · 125 parallels"
   }
 ]
