@@ -453,6 +453,18 @@ body:not([data-view="cards"]):not([data-view="boxes"]) :is(#boxBtn){display:none
 #gAddDlg{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:16px;max-width:360px;width:calc(100% - 32px)}
 #gAddDlg h3{margin:0 0 4px;font-size:1rem}#gAddDlg .opts{display:flex;flex-direction:column;gap:6px;margin:10px 0}
 #gAddDlg .opts button{text-align:left}#gAddDlg .row{display:flex;gap:6px}#gAddDlg .row input{flex:1;min-width:0}
+.gHead{display:flex;align-items:center;gap:8px;margin:0 0 14px}.gHead h2{margin:0;flex:1}
+.gHelp{margin:-6px 0 14px;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.gTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;align-items:start}
+.gT{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;padding:0;text-align:left;color:var(--ink);font:inherit;cursor:pointer;display:flex;flex-direction:column;min-width:0}
+.gT[aria-expanded=true]{outline:2px solid var(--label);outline-offset:-2px}.gT.gSel{outline:2px solid var(--label);outline-offset:-2px}
+.gT .cov{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:8px;background:color-mix(in srgb,var(--line) 40%,transparent)}
+.gT .cov i{aspect-ratio:5/7;border-radius:4px;background:color-mix(in srgb,var(--line) 70%,transparent);overflow:hidden;display:block}
+.gT .cov img{width:100%;height:100%;object-fit:cover;display:block}.gT .cov i.m img{filter:grayscale(1);opacity:.45}
+.gT .b{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}.gT b{font-size:14px;line-height:1.25;min-height:2.5em;overflow-wrap:anywhere}
+.gT .prog{margin:2px 0 0}.gT .row{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted)}.gT .row strong{color:var(--ink)}
+.gT .gChk{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);padding:8px 12px 0}
+.gOpen{grid-column:1/-1}
 .goal small{color:var(--muted)}.goal .gActs{display:flex;flex-wrap:wrap;gap:6px}.goal .gActs .chip{font-size:12px;padding:3px 10px}
 .goal ul{list-style:none;margin:2px 0 0;padding:0;max-height:320px;overflow:auto}
 .goal li{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
@@ -1398,7 +1410,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795524453";
+const BUILD = "1795524897";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4647,41 +4659,60 @@ function goalPrice(s, cat, e, p){
 function goalSpares(s, e, p){
   return friends.filter(f=>(f.cards||[]).filter(c=>!c.gone && sameCard(c, s, e, p)).reduce((n,c)=>n+(Number(c.qty)||1),0) >= 2).map(f=>f.name);
 }
+let goalHelp = false;
 function renderGoalsPage(){
-  $("#vGoals").innerHTML = viewing ? `<p class="hint">Goals are your own: switch back to your collection to see them.</p>` : `<div class="pagehead"><div><h2>Goals</h2><p class="sub">Add one from a set (<b>🎯 Make this a goal</b>; pick an insert or parallel first to track just that), from a search on <b>Sets</b> (e.g. “golazo” → <b>🎯 Make a goal from this search…</b>), or one card at a time: tap <b>🎯</b> on a missing card in a checklist or in a Sets search to put it in a goal group.</p></div></div>` + goalsHTML();
+  $("#vGoals").innerHTML = viewing ? `<p class="hint">Goals are your own: switch back to your collection to see them.</p>` : `<div class="gHead"><h2>Goals</h2>${goals.length?`<button type="button" class="chip" id="gGroupStart"${goalGroupSel?" hidden":""}>📁 Group</button>`:""}<button type="button" class="chip" id="gGroupNew" title="Start an empty group and add single cards with 🎯">＋ Group</button><button type="button" class="chip" id="gHelpBtn" aria-expanded="${goalHelp}" title="How goals work">?</button></div>`
+    + (goalHelp ? `<div class="gHelp"><b>Making goals:</b> on a set, <b>🎯 Make this a goal</b> (pick an insert or parallel first to track just that) · on <b>Sets</b>, search (e.g. “golazo”) → <b>🎯 Make a goal from this search…</b> · one card at a time: <b>🎯</b> on a missing card in a checklist or a Sets search puts it in a group. <b>📁 Group</b> puts several goals together. Tap a goal to see its missing and owned cards.</div>` : "")
+    + goalsHTML();
 }
 $("#vGoals").addEventListener("click", e=>{ if(goalClick(e)) return;
   const sl = e.target.closest("[data-gcard]"); if(sl){ const c = myCards.find(x=>x.id===sl.dataset.gcard); if(c) openCardPage(c); } });
 function goalsHTML(){
   const need = [...new Set(goals.flatMap(goalSetIds))].filter(id=>!catalogs[id] && !goalCatTried.has(id) && sets.some(s=>s.id===id && s.status==="ready"));
   if(need.length && !goalsHTML.busy){ goalsHTML.busy = true; need.forEach(id=>goalCatTried.add(id)); Promise.all(need.map(id=>loadCatalog(id).catch(()=>null))).then(()=>{ goalsHTML.busy = false; if(view==="goals" || view==="home") renderView(); }); }
-  if(!goals.length) return `<p class="hint"><b>No goals yet.</b></p>`;
-  const bar = goalGroupSel ? `<div class="gGroupBar"><b>Group goals:</b> tick the goals to put together${groupsOf().length?" (tick a group to add them to it)":""}
+  if(!goals.length) return `<p class="hint"><b>No goals yet.</b> Tap <b>?</b> to see how to make one.</p>`;
+  const bar = goalGroupSel ? `<div class="gGroupBar"><b>Tick the goals to put together</b>${groupsOf().length?" (tick a 📁 group to add them to it)":""}
       <input type="text" id="gGroupName" placeholder="Group name, e.g. Ex-Grêmio players" value="${esc(goalGroupSel.name||"")}" aria-label="Group name">
-      <button type="button" class="btn" id="gGroupSave"${goalGroupSel.ids.size>=1?"":" disabled"}>Group ${goalGroupSel.ids.size} goal${goalGroupSel.ids.size===1?"":"s"}</button><button type="button" class="chip" id="gGroupCancel">Cancel</button></div>`
-    : `<div class="gGroupBar"><span>Put several goals into one (e.g. every ex-Grêmio player), or start an empty group and add single cards to it with 🎯 on a checklist.</span><button type="button" class="chip" id="gGroupStart">Group goals…</button><button type="button" class="chip" id="gGroupNew">New empty group</button></div>`;
-  const tiles = goals.map(g=>{
-    const multi = g.setId==="*" || isGroup(g), sel = goalGroupSel && goalGroupSel.ids.has(g.id);
+      <button type="button" class="btn" id="gGroupSave"${goalGroupSel.ids.size>=1?"":" disabled"}>Group ${goalGroupSel.ids.size}</button><button type="button" class="chip" id="gGroupCancel">Cancel</button></div>` : "";
+  const openId = [...goalOpen.keys()].find(id=>goals.some(g=>g.id===id)) || "";
+  const parts = [];
+  for(const g of goals){
+    const r = goalRows(g), sel = goalGroupSel && goalGroupSel.ids.has(g.id), name = (isGroup(g)?"📁 ":"") + goalName(g);
     const chk = goalGroupSel ? `<label class="gChk"><input type="checkbox" data-gsel="${esc(g.id)}"${sel?" checked":""}> ${isGroup(g)?"Add to this group":"Put in the group"}</label>` : "";
-    const r = goalRows(g);
-    if(!r) return `<div class="goal${sel?" gSel":""}">${chk}<div class="gTop"><b>${esc(goalName(g))}</b></div><small>${need.length?"Loading checklists…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div>`;
+    if(!r){ parts.push(`<div class="gT${sel?" gSel":""}">${chk}<div class="b"><b>${esc(name)}</b><small>${need.length?"Loading checklists…":"This checklist isn't in the library any more."}</small><div class="gActs"><button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div></div></div>`); continue; }
     const have = r.rows.filter(x=>x.have).length, total = r.rows.length, miss = r.rows.filter(x=>!x.have);
-    const priced = miss.map(x=>({...x, price: goalPrice(x.s, x.cat, x.e, x.p), spare: goalSpares(x.s, x.e, x.p)}));
-    const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), est = known.some(x=>x.price.est);
-    priced.sort((a,b)=>(a.price?a.price.v:1e9)-(b.price?b.price.v:1e9) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
-    const spares = priced.filter(x=>x.spare.length).length, open = goalOpen.get(g.id) || "";
-    const got = r.rows.filter(x=>x.have).sort((a,b)=>String(a.s.year).localeCompare(String(b.s.year)) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
-    return `<div class="goal${sel?" gSel":""}">${chk}
-      <div class="gTop"><b>${isGroup(g)?"📁 ":""}${esc(goalName(g))}</b><span class="gNum">${have}/${total}</span></div>${g.setId==="*"?`<small>${r.sets} set${r.sets===1?"":"s"} in the library · new sets count automatically</small>`:""}${isGroup(g)?`<small>${r.sets} set${r.sets===1?"":"s"} · ${(g.parts||[]).length} goal${(g.parts||[]).length===1?"":"s"} + ${(g.cards||[]).length} single card${(g.cards||[]).length===1?"":"s"} · add more with 🎯 on any checklist</small>`:""}
-      <div class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></div>
-      ${have>=total && total ? `<span class="gDone">Complete! 🎉</span>` : `<small>${pctTxt(have,total)} · missing ${miss.length}${known.length?` · ${est||known.length<miss.length?"≈ ":""}${money(cost, true)} to finish${known.length<miss.length?` (${miss.length-known.length} without a price)`:""}`:""}${spares?` · friends have ${spares} spare${spares===1?"":"s"}`:""}</small>`}
-      <div class="gActs">${miss.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${open==="miss"}">Missing ${miss.length}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${open==="have"}">I have ${have}</button>`:""}${isGroup(g)?`<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button></div>
-      ${open==="have" ? `<div class="gHave">${got.slice(0,300).map(x=>{ const c = x.mine[0]; const img = c && cardImg(c);
-          return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${multi?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}${x.p?" · "+esc(parLabel(x.p)):""}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
-      ${open==="miss" ? `<ul>${priced.slice(0,200).map(x=>`<li>${(()=>{ const pic = (goalPrices[goalKey(x.s, x.e, x.p)]||{}).pic; return pic ? `<img class="gPic" src="${esc(pic.replace(/\/1600\.jpg$/, "/240.jpg").replace(/s-l1600(\.\w+)$/, "s-l225$1"))}" alt="" loading="lazy">` : `<span class="gPic"></span>`; })()}<span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${multi?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}${x.p?" · "+esc(parLabel(x.p)):""}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span>${x.single && isGroup(g)?`<button type="button" class="gX" data-gunpin="${esc(g.id)}" data-gk="${esc(x.single)}" title="Take this card out of the group" aria-label="Take #${esc(x.e.n)} ${esc(x.e.player)} out of the group">✕</button>`:""}</li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
-    </div>`;
-  }).join("");
-  return bar + `<div class="goals">${tiles}</div>`;
+    const priced = miss.map(x=>({...x, price: goalPrice(x.s, x.cat, x.e, x.p)}));
+    const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), est = known.some(x=>x.price.est) || known.length<miss.length;
+    // the cover: your cards' photos first, then the missing ones in grey (checklist / price-search photos)
+    const cov = [];
+    for(const x of r.rows.filter(x=>x.have)){ if(cov.length>=8) break; const c = x.mine.find(c=>cardImg(c)); if(c) cov.push(`<i><img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async"></i>`); }
+    for(const x of miss){ if(cov.length>=8) break; const pic = checklistPic(x.s, x.e, x.p); if(pic) cov.push(`<i class="m"><img src="${esc(pic)}" alt="" loading="lazy" decoding="async"></i>`); }
+    while(cov.length<8) cov.push(`<i></i>`);
+    const done = have>=total && total, isOpen = openId===g.id;
+    parts.push(`<button type="button" class="gT${sel?" gSel":""}" data-gtile="${esc(g.id)}" aria-expanded="${isOpen}">${chk}<span class="cov" aria-hidden="true">${cov.join("")}</span><span class="b"><b>${esc(name)}</b>
+      <span class="prog" aria-hidden="true"><i style="width:${pct(have,total)}%"></i></span>
+      <span class="row"><span><strong>${have}/${total}</strong> cards</span><span>${done?`<span class="gDone">Complete 🎉</span>`:known.length?`${est?"≈ ":""}${money(cost, true)} to go`:`${miss.length} missing`}</span></span></span></button>`);
+    if(isOpen) parts.push(goalDetail(g, r, priced));
+  }
+  return bar + `<div class="gTiles">${parts.join("")}</div>`;
+}
+// the open goal: its numbers, buttons and the Missing / I have lists (full width under the tiles' row)
+function goalDetail(g, r, priced){
+  const multi = g.setId==="*" || isGroup(g), have = r.rows.filter(x=>x.have).length, total = r.rows.length, miss = priced.length;
+  const tab = goalOpen.get(g.id) || "miss";
+  priced = priced.map(x=>({...x, spare: goalSpares(x.s, x.e, x.p)}));
+  priced.sort((a,b)=>(a.price?a.price.v:1e9)-(b.price?b.price.v:1e9) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
+  const known = priced.filter(x=>x.price), cost = known.reduce((n,x)=>n+x.price.v,0), spares = priced.filter(x=>x.spare.length).length;
+  const got = r.rows.filter(x=>x.have).sort((a,b)=>String(a.s.year).localeCompare(String(b.s.year)) || String(a.e.n).localeCompare(String(b.e.n), undefined, {numeric:true}));
+  const info = [`${pctTxt(have,total)}`, miss ? `missing ${miss}` : "", known.length ? `${known.some(x=>x.price.est)||known.length<miss?"≈ ":""}${money(cost, true)} to finish${known.length<miss?` (${miss-known.length} without a price)`:""}` : "",
+    multi ? `${r.sets} set${r.sets===1?"":"s"}` : "", isGroup(g) ? `${(g.parts||[]).length} goal${(g.parts||[]).length===1?"":"s"} + ${(g.cards||[]).length} single card${(g.cards||[]).length===1?"":"s"}` : "",
+    spares ? `friends have ${spares} spare${spares===1?"":"s"}` : ""].filter(Boolean).join(" · ");
+  return `<div class="goal gOpen"><div class="gTop"><b>${isGroup(g)?"📁 ":""}${esc(goalName(g))}</b><span class="gNum">${have}/${total}</span></div><small>${info}</small>
+    <div class="gActs">${miss?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${tab==="miss"}">Missing ${miss}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${tab==="have"}">I have ${have}</button>`:""}${isGroup(g)?`<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button><button type="button" class="chip" data-gclose="1">Close</button></div>
+    ${tab==="have" && got.length ? `<div class="gHave">${got.slice(0,300).map(x=>{ const c = x.mine[0]; const img = c && cardImg(c);
+        return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${multi?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}${x.p?" · "+esc(parLabel(x.p)):""}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
+    ${tab==="miss" && miss ? `<ul>${priced.slice(0,200).map(x=>`<li>${(()=>{ const pic = checklistPic(x.s, x.e, x.p); return pic ? `<img class="gPic" src="${esc(pic)}" alt="" loading="lazy">` : `<span class="gPic"></span>`; })()}<span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${multi?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}${x.p?" · "+esc(parLabel(x.p)):""}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span>${x.single && isGroup(g)?`<button type="button" class="gX" data-gunpin="${esc(g.id)}" data-gk="${esc(x.single)}" title="Take this card out of the group" aria-label="Take #${esc(x.e.n)} ${esc(x.e.player)} out of the group">✕</button>`:""}</li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
+  </div>`;
 }
 let goalGroupSel = null;   // grouping goals on the Goals page: {ids:Set, name}
 // put goals together: plain goals become parts of the group; a ticked group takes them in (and other groups' contents)
@@ -4735,6 +4766,11 @@ $("#vGoals").addEventListener("change", e=>{ const c = e.target.closest("[data-g
 $("#vGoals").addEventListener("input", e=>{ if(e.target.id==="gGroupName" && goalGroupSel) goalGroupSel.name = e.target.value; });
 function goalClick(e){
   const id0 = e.target.id;
+  if(id0==="gHelpBtn"){ goalHelp = !goalHelp; renderView(); return true; }
+  if(e.target.closest("[data-gclose]")){ goalOpen.clear(); renderView(); return true; }
+  { const tl = e.target.closest("[data-gtile]"); if(tl && !e.target.closest("[data-gsel],.gChk")){ if(goalGroupSel){ const c = tl.querySelector("[data-gsel]"); if(c){ c.checked = !c.checked; c.dispatchEvent(new Event("change", {bubbles:true})); } return true; }
+      const id = tl.dataset.gtile, was = goalOpen.has(id); goalOpen.clear(); if(!was) goalOpen.set(id, "miss"); renderView();
+      if(!was) requestAnimationFrame(()=>{ const d = $("#vGoals .gOpen"); if(d) d.scrollIntoView({block:"nearest", behavior:"smooth"}); }); return true; } }
   if(id0==="gGroupStart"){ goalGroupSel = {ids: new Set(), name: ""}; renderView(); return true; }
   if(id0==="gGroupCancel"){ goalGroupSel = null; renderView(); return true; }
   if(id0==="gGroupNew"){ const name = (prompt("Name of the new group (e.g. Ex-Grêmio players)")||"").trim(); if(name) saveGoals(list=>[...list, {id: "gg"+Date.now().toString(36), setId:"group", name, made: isoDay(), parts: [], cards: []}]).then(()=>toast(`📁 ${name} created · add cards with 🎯 on any checklist`)).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
@@ -4751,7 +4787,7 @@ function goalClick(e){
       const rest = list.flatMap(x=>x.id!==g.id ? [x] : (g.cards||[]).length ? [{...x, parts: []}] : []); return [...rest, ...back]; }).then(()=>toast("Ungrouped")).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
   if(t.dataset.gedit){ const g = goals.find(x=>x.id===t.dataset.gedit); if(!g) return true;
     setView("sets"); $("#spDeep").value = deepQ = g.q; goalPick = {q:g.q, skip:new Set(g.skip||[]), noAuto:!!g.noAuto, editId:g.id}; renderSetsPage(); renderDeep(); return true; }
-  if(t.dataset.gopen){ const id = t.dataset.gopen, tab = t.dataset.gtab; goalOpen.get(id)===tab ? goalOpen.delete(id) : goalOpen.set(id, tab); renderView(); return true; }
+  if(t.dataset.gopen){ goalOpen.set(t.dataset.gopen, t.dataset.gtab); renderView(); return true; }
   if(t.dataset.gdel){ const id = t.dataset.gdel;
     if(goalDel!==id){ goalDel = id; renderView(); setTimeout(()=>{ if(goalDel===id){ goalDel = ""; if(view==="goals" || view==="home") renderView(); } }, 4000); return true; }
     goalDel = ""; saveGoals(list=>list.filter(g=>g.id!==id)).then(()=>toast("Goal removed")).catch(err=>toast("Couldn't remove it: " + (err?.message||err))); return true; }
