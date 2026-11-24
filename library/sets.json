@@ -1274,5 +1274,16 @@
     "count": 173,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/645416/2026-Panini-Tributo-Selecci%C3%B3n-Espa%C3%B1ola",
     "note": "TCDB: 2026 Panini Tributo Selección Española · 8 subsets · 0 parallels"
+  },
+  {
+    "id": "mvprizmwc2026",
+    "year": "2026",
+    "name": "Panini Prizm FIFA World Cup",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-24T02:22:26.000Z",
+    "count": 2937,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/614170/2026-Panini-Prizm-FIFA-World-Cup",
+    "note": "TCDB: 2026 Panini Prizm FIFA World Cup · 82 subsets · 466 parallels"
   }
 ]
