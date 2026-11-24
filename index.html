@@ -1410,7 +1410,7 @@ async function importDownloads(files){
 }
 
 /* ---------- new version published: offer to load it ---------- */
-const BUILD = "1795524956";
+const BUILD = "1795525114";
 async function checkVersion(){
   try{
     const h = await (await origFetch(location.pathname + "?v=" + Date.now(), {cache:"no-store"})).text();
@@ -4554,6 +4554,7 @@ const isGroup = g => g && g.setId==="group";
 const groupsOf = () => goals.filter(isGroup);
 const goalSetIds = g => isGroup(g) ? [...new Set([...(g.parts||[]).flatMap(goalSetIds), ...(g.cards||[]).map(k=>k.split("|")[0])])] : g.setId==="*" ? sets.filter(s=>s.status==="ready").map(s=>s.id) : [g.setId];
 function goalName(g){
+  if(g.title) return g.title;   // a name you gave it
   if(isGroup(g)) return g.name || "My group";
   if(g.setId==="*") return `“${g.q}” cards · every set${g.noAuto?" · no autographs / relics":""}${(g.skip||[]).length?` · ${g.skip.length} checklist${g.skip.length===1?"":"s"} left out`:""}`;
   const s = sets.find(x=>x.id===g.setId), cat = catalogs[g.setId], p = g.par && cat && cat.parBySid.get(String(g.par));
@@ -4566,7 +4567,7 @@ async function addGoal(g){
   g = {id: editId || "g" + Date.now().toString(36), setId: g.setId, sub: g.sub||"", par: String(g.par||""), q: (g.q||"").trim(), made: isoDay(), ...(g.setId==="*" ? {skip: [...(g.skip||[])], noAuto: !!g.noAuto} : {}),
     ...(g.team ? {team: g.team} : {}), ...(g.player ? {player: g.player} : {}), ...((g.flags||[]).length ? {flags: [...g.flags]} : {})};
   g.name = goalName(g);
-  if(editId){ try{ await saveGoals(list=>list.map(x=>x.id===editId ? {...g, made: x.made||g.made} : x)); toast(`🎯 Goal updated: ${g.name}`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); } return; }
+  if(editId){ try{ await saveGoals(list=>list.map(x=>x.id===editId ? {...g, made: x.made||g.made, ...(x.title ? {title: x.title} : {})} : x)); toast(`🎯 Goal updated: ${g.name}`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); } return; }
   if(g.setId!=="*" && goals.some(x=>x.setId===g.setId && (x.sub||"")===g.sub && String(x.par||"")===g.par && norm(x.q||"")===norm(g.q) && (x.team||"")===(g.team||"") && (x.player||"")===(g.player||"") && (x.flags||[]).join()===(g.flags||[]).join())){ toast("That's already one of your goals (on Goals)"); return; }
   try{ await saveGoals(list=>[...list, g]); toast(`🎯 Goal added: ${g.name} · see it on Goals`); }catch(err){ toast("Couldn't save the goal: " + (err?.message || err)); }
 }
@@ -4709,7 +4710,7 @@ function goalDetail(g, r, priced){
     multi ? `${r.sets} set${r.sets===1?"":"s"}` : "", isGroup(g) ? `${(g.parts||[]).length} goal${(g.parts||[]).length===1?"":"s"} + ${(g.cards||[]).length} single card${(g.cards||[]).length===1?"":"s"}` : "",
     spares ? `friends have ${spares} spare${spares===1?"":"s"}` : ""].filter(Boolean).join(" · ");
   return `<div class="goal gOpen"><div class="gTop"><b>${isGroup(g)?"📁 ":""}${esc(goalName(g))}</b><span class="gNum">${have}/${total}</span></div><small>${info}</small>
-    <div class="gActs">${miss?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${tab==="miss"}">Missing ${miss}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${tab==="have"}">I have ${have}</button>`:""}${isGroup(g)?`<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button><button type="button" class="chip" data-gclose="1">Close</button></div>
+    <div class="gActs">${miss?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="miss" aria-pressed="${tab==="miss"}">Missing ${miss}</button>`:""}${got.length?`<button type="button" class="chip" data-gopen="${esc(g.id)}" data-gtab="have" aria-pressed="${tab==="have"}">I have ${have}</button>`:""}<button type="button" class="chip" data-grename="${esc(g.id)}">Rename</button>${isGroup(g)?`${(g.parts||[]).length?`<button type="button" class="chip" data-gungroup="${esc(g.id)}">Ungroup</button>`:""}`:`<button type="button" class="chip" data-gset2="${esc(g.id)}">${g.setId==="*"?"See all":"Open checklist"}</button>`}${g.setId==="*"?`<button type="button" class="chip" data-gedit="${esc(g.id)}">Choose checklists</button>`:""}<button type="button" class="chip" data-gdel="${esc(g.id)}">${goalDel===g.id?"Tap again to remove":"Remove"}</button><button type="button" class="chip" data-gclose="1">Close</button></div>
     ${tab==="have" && got.length ? `<div class="gHave">${got.slice(0,300).map(x=>{ const c = x.mine[0]; const img = c && cardImg(c);
         return `<button type="button" class="gH" data-gcard="${esc(c.id)}" title="${esc(x.e.player)}">${img?`<img src="${esc(cardThumb(c))}" alt="" loading="lazy" decoding="async">`:`<span class="gNo">#${esc(x.e.n)}</span>`}<span>#${esc(x.e.n)} ${esc(x.e.player)}${multi?`<small>${esc(yearLabel(x.s.year))} ${esc(x.s.name)}${x.p?" · "+esc(parLabel(x.p)):""}</small>`:""}${x.have>1?`<small>×${x.have}</small>`:""}</span></button>`; }).join("")}</div>` : ""}
     ${tab==="miss" && miss ? `<ul>${priced.slice(0,200).map(x=>`<li>${(()=>{ const pic = checklistPic(x.s, x.e, x.p); return pic ? `<img class="gPic" src="${esc(pic)}" alt="" loading="lazy">` : `<span class="gPic"></span>`; })()}<span class="gN">#${esc(x.e.n)}</span><span class="gP">${esc(x.e.player)}${x.e.rc?" <small>RC</small>":""}${multi?`<span class="gF" style="color:var(--muted)">${esc(yearLabel(x.s.year))} ${esc(x.s.name)} · ${esc(x.e.sub||"Base")}${x.p?" · "+esc(parLabel(x.p)):""}</span>`:""}${x.spare.length?`<span class="gF">${esc(x.spare.join(", "))} ${x.spare.length>1?"have":"has"} a spare</span>`:""}</span><span class="gV">${x.price?(x.price.url?`<a href="${esc(x.price.url)}" target="_blank" rel="noopener" title="${esc(x.price.src||"")}">${money(x.price.v)}</a>`:`${x.price.est?"~":""}${money(x.price.v)}`):"—"}</span>${x.single && isGroup(g)?`<button type="button" class="gX" data-gunpin="${esc(g.id)}" data-gk="${esc(x.single)}" title="Take this card out of the group" aria-label="Take #${esc(x.e.n)} ${esc(x.e.player)} out of the group">✕</button>`:""}</li>`).join("")}${priced.length>200?`<li><small>+ ${priced.length-200} more</small></li>`:""}</ul><small>Prices: SportsCardsPro or eBay sales (search them in Tidy up → Goals), else your or a friend's copy; ~ = the usual price of this insert / parallel in the set.</small>` : ""}
@@ -4780,8 +4781,11 @@ function goalClick(e){
     goalGroupSel = null; groupGoals(sel.ids, name).catch(err=>toast("Couldn't group them: " + (err?.message||err))); return true; }
   const t = e.target.closest("[data-gopen],[data-gdel],[data-gset2],[data-gedit],[data-grename],[data-gungroup],[data-gunpin]"); if(!t) return false;
   if(t.dataset.gunpin){ const gid = t.dataset.gunpin, k = t.dataset.gk; saveGoals(list=>list.map(g=>g.id===gid ? {...g, cards: (g.cards||[]).filter(x=>x!==k)} : g)).then(()=>toast("Taken out of the group")).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
-  if(t.dataset.grename){ const g = goals.find(x=>x.id===t.dataset.grename); if(!g) return true; const name = (prompt("Group name", g.name)||"").trim();
-    if(name && name!==g.name) saveGoals(list=>list.map(x=>x.id===g.id ? {...x, name} : x)).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
+  if(t.dataset.grename){ const g = goals.find(x=>x.id===t.dataset.grename); if(!g) return true;
+    const name = prompt(isGroup(g) ? "Group name" : "Goal name (leave empty to go back to the automatic name)", goalName(g)); if(name===null) return true;
+    const v = name.trim();
+    saveGoals(list=>list.map(x=>{ if(x.id!==g.id) return x; if(isGroup(x)) return v ? {...x, name: v, title: undefined} : x;
+      const y = {...x}; if(v) y.title = v; else delete y.title; return y; })).then(()=>toast(v ? `Renamed: ${v}` : "Back to the automatic name")).catch(err=>toast("Couldn't save: " + (err?.message||err))); return true; }
   if(t.dataset.gungroup){ const g = goals.find(x=>x.id===t.dataset.gungroup); if(!g) return true;
     // its goals go back on their own; single cards stay in the (now smaller) group
     saveGoals(list=>{ const back = (g.parts||[]).map((p,i)=>{ const x = {...p, id: "g"+Date.now().toString(36)+i, made: isoDay()}; x.name = goalName(x); return x; });
