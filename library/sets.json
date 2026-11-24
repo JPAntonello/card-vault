@@ -1263,5 +1263,16 @@
     "count": 1163,
     "url": "https://www.tcdb.com/ViewSet.cfm/sid/669125/2026-27-Topps-Flagship-Premier-League",
     "note": "TCDB: 2026 27 Topps Flagship Premier League · 43 subsets · 371 parallels"
+  },
+  {
+    "id": "mvptse2026",
+    "year": "2026",
+    "name": "Panini Tributo Selección Española",
+    "sport": "Soccer",
+    "status": "ready",
+    "requested": "2026-11-24T00:15:52.000Z",
+    "count": 173,
+    "url": "https://www.tcdb.com/ViewSet.cfm/sid/645416/2026-Panini-Tributo-Selecci%C3%B3n-Espa%C3%B1ola",
+    "note": "TCDB: 2026 Panini Tributo Selección Española · 8 subsets · 0 parallels"
   }
 ]
